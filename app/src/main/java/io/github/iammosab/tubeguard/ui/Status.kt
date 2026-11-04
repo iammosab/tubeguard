@@ -32,9 +32,9 @@ data class Status(
 fun Status.headline(): Headline = when {
     // After Undo, "off" is only true once YouTube is confirmed back.
     protection == "off" -> if (youtubePresent == true) Headline.OFF else Headline.UNDO_INCOMPLETE
+    protection == null -> Headline.NOT_SET_UP
     youtubePresent == true -> Headline.YOUTUBE_PRESENT
     !adbConnected -> Headline.NOT_PROTECTED_NO_ADB
-    protection == null -> Headline.NOT_SET_UP
     youtubePresent == null -> Headline.CHECK_FAILED
     !watchdogOk -> Headline.WATCHDOG_OFF
     else -> Headline.PROTECTED

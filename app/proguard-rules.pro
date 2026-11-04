@@ -1,0 +1,13 @@
+# The TV's ADB: libadb-android, its TLS (Conscrypt, BouncyCastle) and certificate code use reflection and JNI.
+-keep class io.github.muntashirakon.** { *; }
+-keep class org.conscrypt.** { *; }
+-keep class org.bouncycastle.** { *; }
+-keep class android.sun.** { *; }
+-keep class com.android.org.conscrypt.** { *; }
+-dontwarn io.github.muntashirakon.**
+-dontwarn org.conscrypt.**
+-dontwarn org.bouncycastle.**
+-dontwarn android.sun.**
+-dontwarn javax.naming.**
+-dontwarn org.openjsse.**
+-dontwarn sun.security.**

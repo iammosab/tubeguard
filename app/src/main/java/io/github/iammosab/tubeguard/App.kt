@@ -52,6 +52,7 @@ class App : Application() {
 
     override fun onCreate() {
         super.onCreate()
+        if (store.get(Setup.PROTECTION) != null) adb.markAllowed()
         getSystemService(NotificationManager::class.java).createNotificationChannel(
             NotificationChannel(CHANNEL, getString(R.string.channel_protection), NotificationManager.IMPORTANCE_HIGH)
         )
@@ -63,9 +64,13 @@ class App : Application() {
         runCatching(block).onFailure { Log.e(LocalAdb.TAG, "background task failed", it) }
     }
 
-    fun checkNow(trigger: String) = background {
+    fun checkNow(trigger: String) = background { checkNowBlocking(trigger) }
+
+    /** One check, on the calling (background) thread. */
+    fun checkNowBlocking(trigger: String) {
         val result = guard.enforce(trigger)
-        if (result !is GuardResult.Failed) store.put("lastCheck", System.currentTimeMillis().toString())
+        val guarding = store.get(Setup.PROTECTION) == "on"
+        if (guarding && result !is GuardResult.Failed) store.put("lastCheck", System.currentTimeMillis().toString())
         if (store.get(Setup.PROTECTION) == "on" && adb.connected) watchdog.ensure()
         Log.i(LocalAdb.TAG, "check ($trigger): $result")
         if (result is GuardResult.Failed && store.get(Setup.PROTECTION) == "on") {
@@ -100,7 +105,7 @@ class App : Application() {
     }
 
     fun setup(): List<StepResult> {
-        adb.connect(LocalAdb.SETUP_WAIT_MS)
+        adb.connect(LocalAdb.SETUP_WAIT_MS, ask = true)
         val steps = Setup(
             shell = adb,
             guard = guard,

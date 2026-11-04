@@ -14,17 +14,28 @@ class LocalAdb(private val context: Context) : Shell {
 
     val connected: Boolean get() = runCatching { adb.isConnected }.getOrDefault(false)
 
+    /** Whether this TV has let the app in before; until then only the setup step may make it ask. */
+    private val prefs = context.getSharedPreferences("adb", Context.MODE_PRIVATE)
+    val everConnected: Boolean get() = prefs.getBoolean(EVER, false)
+
+    /** For a TV set up before this was recorded. */
+    fun markAllowed() = prefs.edit().putBoolean(EVER, true).apply()
+
     /**
      * Connects if not already connected; false (never an exception) when the TV's ADB can't be reached or the
      * "Allow USB debugging?" prompt isn't answered within [waitMs] (the library would otherwise wait forever).
+     * Unless [ask], it doesn't try on a TV that has never let the app in, so the prompt only ever appears when
+     * the owner pressed Connect and knows what it is.
      */
     @Synchronized
-    fun connect(waitMs: Long = BACKGROUND_WAIT_MS): Boolean {
+    fun connect(waitMs: Long = BACKGROUND_WAIT_MS, ask: Boolean = false): Boolean {
         if (connected) return true
+        if (!ask && !everConnected) return false
+        Log.i(TAG, "connecting (wait ${waitMs / 1000} s)")
         adb.setTimeout(waitMs, TimeUnit.MILLISECONDS)
         val ok = attempt("tcp 5555") { Deadline.run(waitMs + 5_000) { adb.connect("127.0.0.1", 5555) } } ||
             attempt("mdns") { Deadline.run(waitMs + 10_000) { adb.autoConnect(context.applicationContext, 5_000) } }
-        if (!ok) runCatching { adb.disconnect() }
+        if (!ok) runCatching { adb.disconnect() } else prefs.edit().putBoolean(EVER, true).apply()
         Log.i(TAG, "connect: $ok")
         return ok
     }
@@ -108,6 +119,7 @@ class LocalAdb(private val context: Context) : Shell {
         const val BACKGROUND_WAIT_MS = 10_000L
         /** When the owner pressed Connect and has the TV's prompt in front of them. */
         const val SETUP_WAIT_MS = 90_000L
+        private const val EVER = "everConnected"
         private const val EXIT = "__EXIT:"
         private val EXIT_LINE = Regex("__EXIT:-?\\d+\\s")
         private val INSTALL_DONE = Regex("(Success|Failure[^\\n]*)\\s")

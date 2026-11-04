@@ -29,8 +29,9 @@ class StatusTest {
         assertEquals(Headline.NOT_SET_UP, good.copy(protection = null).headline())
 
     @Test
-    fun neverSetUpWithoutAdbIsNoAdb() =
-        assertEquals(Headline.NOT_PROTECTED_NO_ADB, good.copy(protection = null, adbConnected = false).headline())
+    fun neverSetUpWithoutAdbIsStillNotSetUp() =
+        // Before setup the app doesn't even try the TV's ADB, so "can't reach it" would be the wrong story.
+        assertEquals(Headline.NOT_SET_UP, good.copy(protection = null, adbConnected = false, youtubePresent = null).headline())
 
     @Test
     fun watchdogOffIsNotProtected() =
