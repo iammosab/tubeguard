@@ -2,8 +2,8 @@ package io.github.iammosab.tubeguard
 
 import io.github.iammosab.tubeguard.guard.GuardResult
 import io.github.iammosab.tubeguard.guard.YouTubeGuard
-import io.github.iammosab.tubeguard.shell.ShellResult
 import io.github.iammosab.tubeguard.state.EventLog
+import io.github.iammosab.tubeguard.shell.ShellResult
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -82,5 +82,21 @@ class YouTubeGuardTest {
         val shell = listing("package:com.google.android.youtube.tv")
         val result = YouTubeGuard(shell, log, store = MapKeyValue("protection" to "on")).enforce("boot")
         assertTrue(result is GuardResult.Removed)
+    }
+
+    @Test
+    fun unknownIsNotAbsent() {
+        // pm couldn't be asked: that is "don't know", never "YouTube is gone".
+        val shell = FakeShell(Regex("^pm list") to ShellResult(1, "cmd: Can't find service: package"))
+        assertEquals(null, YouTubeGuard(shell, log).isPresent("com.google.android.youtube.tv"))
+    }
+
+    @Test
+    fun removalsAreCountedOutsideTheLog() {
+        val store = MapKeyValue("protection" to "on")
+        val guard = YouTubeGuard(listing("package:com.google.android.youtube.tv"), EventLog(store), store = store)
+        guard.enforce("boot")
+        guard.enforce("boot")
+        assertEquals("2", store.get("removals"))
     }
 }

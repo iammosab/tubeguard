@@ -87,4 +87,15 @@ class SetupTest {
         assertEquals(false, steps.single().ok)
         assertEquals(null, store.get("protection"))
     }
+
+    @Test
+    fun cantTellIfYoutubeIsThereIsNotAdoption() {
+        val shell = FakeShell(
+            Regex("^pm list packages") to ShellResult(1, "Can't find service: package"),
+            Regex("^settings get") to ShellResult(0, "null"),
+        )
+        val steps = setup(shell, tizenTube = "2.0.3").run(listOf("armeabi-v7a"), isTcl = false)
+        assertTrue(steps.none { it.name == "adopted" })
+        assertEquals(false, steps.first { it.name == "youtube" }.ok)
+    }
 }

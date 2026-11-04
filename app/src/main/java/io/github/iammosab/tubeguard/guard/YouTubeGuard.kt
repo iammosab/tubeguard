@@ -15,10 +15,11 @@ sealed class GuardResult {
 class YouTubeGuard(
     private val shell: Shell,
     private val log: EventLog,
-    private val packages: List<String> = listOf(YOUTUBE),
+    val packages: List<String> = listOf(YOUTUBE),
     private val store: KeyValue? = null,
 ) {
-    fun isPresent(pkg: String): Boolean = listing(pkg)?.let { it != NOT_LISTED } == true
+    /** null when pm couldn't be asked: that is "don't know", never "gone". */
+    fun isPresent(pkg: String): Boolean? = listing(pkg)?.let { it != NOT_LISTED }
 
     /** Removes every guarded package that is back; [trigger] says why we looked (boot, package_added, ...). */
     fun enforce(trigger: String): GuardResult {
@@ -35,6 +36,7 @@ class YouTubeGuard(
             val out = shell.run("pm uninstall -k --user 0 $pkg")
             result = if (out.ok && out.out.contains("Success")) {
                 log.add("removed", "$trigger: $pkg $how".trim())
+                store?.let { it.put(REMOVALS, ((it.get(REMOVALS)?.toIntOrNull() ?: 0) + 1).toString()) }
                 GuardResult.Removed(how)
             } else {
                 log.add("remove_failed", "$trigger: $pkg: ${out.out}")
@@ -55,6 +57,8 @@ class YouTubeGuard(
 
     companion object {
         const val YOUTUBE = "com.google.android.youtube.tv"
+        /** How many times YouTube was removed; kept apart from the log, which drops old entries. */
+        const val REMOVALS = "removals"
         private const val NOT_LISTED = "\u0000"
     }
 }

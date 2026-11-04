@@ -12,7 +12,6 @@ import android.view.accessibility.AccessibilityEvent
 import io.github.iammosab.tubeguard.App
 import io.github.iammosab.tubeguard.button.TclKeys
 import io.github.iammosab.tubeguard.shell.LocalAdb
-import io.github.iammosab.tubeguard.guard.YouTubeGuard
 
 /**
  * The long-lived part of the app. Android keeps accessibility services running where TV makers kill ordinary
@@ -22,7 +21,7 @@ class GuardService : AccessibilityService() {
     private val packages = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
             val pkg = intent.data?.schemeSpecificPart ?: return
-            if (pkg != YouTubeGuard.YOUTUBE) return
+            if (pkg !in App.of(context).guard.packages) return
             val trigger = when (intent.action) {
                 Intent.ACTION_PACKAGE_ADDED -> "package_added"
                 Intent.ACTION_PACKAGE_REPLACED -> "package_replaced"

@@ -22,6 +22,12 @@
 
         <TextView android:id="@+id/headlineDetail" style="@style/Body" android:textColor="@color/muted" />
 
+        <Button
+            android:id="@+id/playStore"
+            style="@style/Action"
+            android:text="@string/open_play_store"
+            android:visibility="gone" />
+
         <LinearLayout
             android:id="@+id/setupPanel"
             android:layout_width="match_parent"

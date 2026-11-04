@@ -28,12 +28,20 @@ class Updater(
     private val cacheDir: File,
     private val store: KeyValue? = null,
 ) {
-    fun update(target: Target, installedVersion: String?, abis: List<String>, force: Boolean = false): UpdateResult {
+    /** [replace]: uninstall the installed copy (signing the owner out) once the new one is downloaded and checked. */
+    @Synchronized
+    fun update(
+        target: Target,
+        installedVersion: String?,
+        abis: List<String>,
+        force: Boolean = false,
+        replace: Boolean = false,
+    ): UpdateResult {
         val page = http.get("https://api.github.com/repos/${target.repo}/releases/latest")
         if (page.code != 200) return fail(target, "release check: HTTP ${page.code}")
         val release = runCatching { parseRelease(page.body) }.getOrElse { return fail(target, "release check: $it") }
         store?.put("latest.${target.name}", release.tag)
-        if (!isNewer(release.tag, installedVersion)) return UpdateResult.UpToDate
+        if (!isNewer(release.tag, installedVersion)) return UpdateResult.UpToDate.also { store?.put(lastError(target), null) }
         val asset = when (target) {
             Target.TIZENTUBE -> pickTizenTube(release, abis)
             Target.SELF -> release.assets.firstOrNull { it.name == SELF_ASSET }
@@ -49,6 +57,7 @@ class Updater(
             if (asset.sha256 != null && sha256(file) != asset.sha256.lowercase()) {
                 return fail(target, "download of ${asset.name} is corrupt (checksum)")
             }
+            if (replace) shell.run("pm uninstall ${target.pkg}")
             var out = shell.install(file)
             if (out.out.contains("INSUFFICIENT_STORAGE")) {
                 shell.run("pm trim-caches 999G")
@@ -60,6 +69,7 @@ class Updater(
                     UpdateResult.SignatureMismatch
                 }
                 out.ok -> {
+                    store?.put(lastError(target), null)
                     log.add("updated", "${target.name}: ${installedVersion ?: "none"} → ${release.tag}")
                     UpdateResult.Installed(release.tag)
                 }
@@ -70,13 +80,20 @@ class Updater(
         }
     }
 
-    private fun isResumed(pkg: String): Boolean =
-        shell.run("dumpsys activity activities | grep -E 'mResumedActivity|topResumedActivity'").out.contains("$pkg/")
+    /** Whether [pkg] is on screen; when that can't be told, it counts as on screen, so nobody's video is cut off. */
+    private fun isResumed(pkg: String): Boolean {
+        val out = shell.run("dumpsys activity activities | grep -E 'mResumedActivity|topResumedActivity'")
+        return !out.ok || out.out.contains("$pkg/")
+    }
 
+    /** Logs a failure only when it differs from the last one, so a TV offline for days doesn't flood the log. */
     private fun fail(target: Target, reason: String): UpdateResult {
-        log.add("update_failed", "${target.name}: $reason")
+        if (store == null || store.get(lastError(target)) != reason) log.add("update_failed", "${target.name}: $reason")
+        store?.put(lastError(target), reason)
         return UpdateResult.Failed(reason)
     }
+
+    private fun lastError(target: Target) = "lastUpdateError.${target.name}"
 
     private fun sha256(file: File): String {
         val md = MessageDigest.getInstance("SHA-256")

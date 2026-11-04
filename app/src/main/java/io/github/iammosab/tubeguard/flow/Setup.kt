@@ -37,7 +37,7 @@ class Setup(
         val a11y = AccessibilitySetting.enable(shell, OUR_SERVICE)
         steps += StepResult("accessibility", a11y.ok, a11y.out)
 
-        val youtubeGone = !guard.isPresent(YouTubeGuard.YOUTUBE)
+        val youtubeGone = guard.isPresent(YouTubeGuard.YOUTUBE) == false
         val tizenTube = tizenTubeVersion()
         if (youtubeGone && tizenTube != null && (!isTcl || keys.isMapped())) {
             log.add("adopted", "already set up: YouTube removed, TizenTube $tizenTube" + if (isTcl) ", button mapped" else "")

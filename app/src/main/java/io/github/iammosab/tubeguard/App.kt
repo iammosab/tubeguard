@@ -9,12 +9,15 @@ import android.content.Context
 import android.content.Intent
 import android.os.Build
 import android.util.Log
+import io.github.iammosab.tubeguard.access.AccessibilitySetting
+import io.github.iammosab.tubeguard.access.OUR_SERVICE
 import io.github.iammosab.tubeguard.button.KeyPolicy
 import io.github.iammosab.tubeguard.button.TclKeys
 import io.github.iammosab.tubeguard.flow.Setup
 import io.github.iammosab.tubeguard.flow.StepResult
 import io.github.iammosab.tubeguard.flow.Undo
 import io.github.iammosab.tubeguard.guard.GuardResult
+import io.github.iammosab.tubeguard.guard.Watchdog
 import io.github.iammosab.tubeguard.guard.YouTubeGuard
 import io.github.iammosab.tubeguard.jobs.Scheduler
 import io.github.iammosab.tubeguard.shell.AdbKeepAlive
@@ -38,7 +41,13 @@ class App : Application() {
     val keys by lazy { KeyPolicy(store) }
     val tcl by lazy { TclKeys(adb, store) }
     val updater by lazy { Updater(adb, UrlHttp(), log, cacheDir, store) }
+    val watchdog by lazy {
+        Watchdog(adb, log, jobsPending = { Scheduler.pending(this) }, schedule = { Scheduler.schedule(this) })
+    }
+    /** Checks and changes, one at a time. */
     private val worker = Executors.newSingleThreadExecutor()
+    /** Downloads and installs, so a 150 MB update never holds up a YouTube check. */
+    private val updates = Executors.newSingleThreadExecutor()
     private val abis get() = Build.SUPPORTED_ABIS.toList()
 
     override fun onCreate() {
@@ -48,13 +57,16 @@ class App : Application() {
         )
     }
 
-    fun background(block: () -> Unit) {
-        worker.execute { runCatching(block).onFailure { Log.e(LocalAdb.TAG, "background task failed", it) } }
+    fun background(block: () -> Unit) = worker.execute(guarded(block))
+
+    private fun guarded(block: () -> Unit) = Runnable {
+        runCatching(block).onFailure { Log.e(LocalAdb.TAG, "background task failed", it) }
     }
 
     fun checkNow(trigger: String) = background {
-        store.put("lastCheck", System.currentTimeMillis().toString())
         val result = guard.enforce(trigger)
+        if (result !is GuardResult.Failed) store.put("lastCheck", System.currentTimeMillis().toString())
+        if (store.get(Setup.PROTECTION) == "on" && adb.connected) watchdog.ensure()
         Log.i(LocalAdb.TAG, "check ($trigger): $result")
         if (result is GuardResult.Failed && store.get(Setup.PROTECTION) == "on") {
             notify(getString(R.string.notify_not_protected, result.reason))
@@ -62,13 +74,13 @@ class App : Application() {
     }
 
     /** Updates TizenTube (only if it is installed; installing it is setup's job) and then this app. */
-    fun updateAll(trigger: String) = background {
+    fun updateAll(trigger: String) = updates.execute(guarded {
         if (store.get(Setup.PROTECTION) != "off") versionOf(Target.TIZENTUBE.pkg)?.let { updateTizenTube(it, force = false) }
         Log.i(LocalAdb.TAG, "update self ($trigger): ${updater.update(Target.SELF, versionOf(packageName), abis)}")
-    }
+    })
 
-    fun updateTizenTube(installed: String?, force: Boolean): UpdateResult {
-        val result = updater.update(Target.TIZENTUBE, installed, abis, force)
+    fun updateTizenTube(installed: String?, force: Boolean, replace: Boolean = false): UpdateResult {
+        val result = updater.update(Target.TIZENTUBE, installed, abis, force, replace)
         when (result) {
             UpdateResult.SignatureMismatch -> store.put(SIGNATURE_MISMATCH, "true")
             is UpdateResult.Installed -> store.put(SIGNATURE_MISMATCH, null)
@@ -78,11 +90,13 @@ class App : Application() {
         return result
     }
 
-    /** Uninstalls TizenTube (signing the owner out of it) and installs the release build; only on the owner's say. */
+    /**
+     * Replaces TizenTube (signing the owner out of it) with the release build, only on the owner's say. The old
+     * copy goes only once the new one is downloaded and checked.
+     */
     fun reinstallTizenTube(): UpdateResult {
-        adb.run("pm uninstall ${Target.TIZENTUBE.pkg}")
-        log.add("tizentube_reinstall", "uninstalled to install the release build")
-        return updateTizenTube(null, force = true)
+        log.add("tizentube_reinstall", "replacing the installed copy with the release build")
+        return updateTizenTube(null, force = true, replace = true)
     }
 
     fun setup(): List<StepResult> {
@@ -107,6 +121,7 @@ class App : Application() {
     fun status(): Status {
         val connected = adb.connect()
         val services = if (connected) adb.run("settings get secure enabled_accessibility_services").out else null
+        val a11yOn = connected && adb.run("settings get secure accessibility_enabled").out.trim() == "1"
         val isTcl = connected && tcl.isTcl()
         return Status(
             adbConnected = connected,
@@ -122,10 +137,11 @@ class App : Application() {
             otherKeyServices = KeyPolicy.otherKeyServices(services),
             keepAdbOn = store.get(AdbKeepAlive.KEY) != "false",
             lastCheck = store.get("lastCheck")?.toLongOrNull(),
-            removals = log.recent(EventLog.CAP).count { it.kind == "removed" },
+            removals = store.get(YouTubeGuard.REMOVALS)?.toIntOrNull() ?: 0,
             appVersion = versionOf(packageName),
             appLatest = store.get("latest.${Target.SELF.name}"),
             log = log.recent(50),
+            watchdogOk = !connected || (OUR_SERVICE in AccessibilitySetting.entries(services) && a11yOn && Scheduler.pending(this)),
         )
     }
 

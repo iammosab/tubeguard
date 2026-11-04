@@ -141,4 +141,45 @@ class TclKeysTest {
         val a = JSONArray(json ?: "[]")
         return (0 until a.length()).map { a.getString(it) }
     }
+
+    /** A TV where `settings get` for [failing] keys fails (ADB dropped mid-read). */
+    private class FlakyTv(private val tv: Tv, private val failing: Set<String>) : Shell {
+        override fun run(cmd: String): ShellResult {
+            if (failing.any { cmd == "settings get global $it" }) { tv.commands += cmd; return ShellResult(-100, "ADB connection lost") }
+            return tv.run(cmd)
+        }
+        override fun install(apk: File) = tv.install(apk)
+    }
+
+    @Test
+    fun failedListReadDoesNotApply() {
+        val tv = Tv("CustomKeyList" to "[\"4066\"]")
+        assertFalse(TclKeys(FlakyTv(tv, setOf("CustomKeyList")), MapKeyValue()).apply())
+        assertTrue(tv.commands.none { it.startsWith("settings put") })
+        assertEquals("[\"4066\"]", tv.settings["CustomKeyList"])
+    }
+
+    @Test
+    fun failedListReadDoesNotUndo() {
+        val tv = Tv("CustomKeyList" to "[\"4066\",\"4065\"]")
+        assertFalse(TclKeys(FlakyTv(tv, setOf("CustomKeyList")), MapKeyValue()).undo())
+        assertTrue(tv.commands.none { it.startsWith("settings put") || it.startsWith("settings delete") })
+    }
+
+    @Test
+    fun failedKeyReadIsNotRecordedAsAbsent() {
+        val stock = "{\"keycode\":190}"
+        val tv = Tv("CustomKeyList" to "[\"190\"]", "CustomKey_190" to stock)
+        val store = MapKeyValue()
+        assertFalse(TclKeys(FlakyTv(tv, setOf("CustomKey_190")), store).apply())
+        assertEquals(null, store.get("orig.CustomKey_190"))
+        assertEquals(stock, tv.settings["CustomKey_190"])
+    }
+
+    @Test
+    fun unknownBrandCountsAsTclForUndo() {
+        // If even the reads fail, Undo still tries the TCL table (harmless elsewhere) rather than skipping it.
+        val tv = Tv().apply { manufacturer = "Xiaomi" }
+        assertTrue(TclKeys(FlakyTv(tv, setOf("CustomKeyList")), MapKeyValue()).isTcl())
+    }
 }

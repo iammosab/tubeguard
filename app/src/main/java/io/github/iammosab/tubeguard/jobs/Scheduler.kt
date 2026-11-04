@@ -24,6 +24,9 @@ object Scheduler {
         }
     }
 
+    fun pending(context: Context): Boolean =
+        context.getSystemService(JobScheduler::class.java).let { it.getPendingJob(CHECK) != null && it.getPendingJob(UPDATE) != null }
+
     fun cancel(context: Context) {
         context.getSystemService(JobScheduler::class.java).apply { cancel(CHECK); cancel(UPDATE) }
     }

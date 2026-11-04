@@ -9,6 +9,10 @@
     <string name="headline_not_set_up">Not set up yet</string>
     <string name="headline_no_adb">Not protected: can\'t reach the TV\'s ADB</string>
     <string name="headline_youtube">Official YouTube is installed</string>
+    <string name="headline_watchdog">Not protected: the background watch was switched off (open TubeGuard after a force stop)</string>
+    <string name="headline_check_failed">Not protected: couldn\'t check for official YouTube</string>
+    <string name="headline_undo_incomplete">Undo didn\'t finish: official YouTube isn\'t back yet</string>
+    <string name="open_play_store">Get YouTube from Play Store</string>
     <string name="headline_off">Off: the TV is back to official YouTube</string>
     <string name="headline_detail">Last check %1$s · YouTube removed: %2$d</string>
     <string name="never">never</string>

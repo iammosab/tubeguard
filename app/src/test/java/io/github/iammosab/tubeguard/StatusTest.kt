@@ -31,4 +31,18 @@ class StatusTest {
     @Test
     fun neverSetUpWithoutAdbIsNoAdb() =
         assertEquals(Headline.NOT_PROTECTED_NO_ADB, good.copy(protection = null, adbConnected = false).headline())
+
+    @Test
+    fun watchdogOffIsNotProtected() =
+        assertEquals(Headline.WATCHDOG_OFF, good.copy(watchdogOk = false).headline())
+
+    @Test
+    fun cantCheckYoutubeIsNotProtected() =
+        assertEquals(Headline.CHECK_FAILED, good.copy(youtubePresent = null).headline())
+
+    @Test
+    fun undoThatDidNotBringYoutubeBackIsIncomplete() {
+        assertEquals(Headline.UNDO_INCOMPLETE, good.copy(protection = "off", youtubePresent = false).headline())
+        assertEquals(Headline.UNDO_INCOMPLETE, good.copy(protection = "off", youtubePresent = null).headline())
+    }
 }

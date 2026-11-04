@@ -145,4 +145,32 @@ class UpdaterTest {
     }
 
     private fun sha256(b: ByteArray) = MessageDigest.getInstance("SHA-256").digest(b).joinToString("") { "%02x".format(it) }
+
+    @Test
+    fun repeatedFailureIsLoggedOnce() {
+        val store = MapKeyValue()
+        val u = Updater(FakeShell(), http(json = "{}", code = 403), log, cache, store)
+        repeat(3) { u.update(Target.TIZENTUBE, "2.0.3", abis) }
+        assertEquals(1, log.recent().count { it.kind == "update_failed" })
+        // A different failure is news again.
+        Updater(FakeShell(), http(json = "{}", code = 500), log, cache, store).update(Target.TIZENTUBE, "2.0.3", abis)
+        assertEquals(2, log.recent().count { it.kind == "update_failed" })
+    }
+
+    @Test
+    fun reinstallUninstallsOnlyAfterAGoodDownload() {
+        val bad = FakeShell(notResumed)
+        updater(bad, http(release(digest = "0".repeat(64)))).update(Target.TIZENTUBE, null, abis, force = true, replace = true)
+        assertTrue(bad.commands.none { it.startsWith("pm uninstall") })
+
+        val good = FakeShell(notResumed, Regex("^install") to ShellResult(0, "Success"))
+        updater(good).update(Target.TIZENTUBE, null, abis, force = true, replace = true)
+        assertEquals(listOf("pm uninstall io.gh.reisxd.tizentube.cobalt", "install cobalt-arm.apk"), good.commands.filter { !it.startsWith("dumpsys") })
+    }
+
+    @Test
+    fun unknownForegroundDefers() {
+        val shell = FakeShell(Regex("^dumpsys activity") to ShellResult(-100, "ADB connection lost"))
+        assertTrue(updater(shell).update(Target.TIZENTUBE, "2.0.3", abis) is UpdateResult.Deferred)
+    }
 }

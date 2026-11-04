@@ -2,6 +2,8 @@ package io.github.iammosab.tubeguard.ui
 
 import android.app.Activity
 import android.app.AlertDialog
+import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import android.text.format.DateFormat
 import android.view.View
@@ -12,6 +14,7 @@ import android.widget.TextView
 import io.github.iammosab.tubeguard.App
 import io.github.iammosab.tubeguard.R
 import io.github.iammosab.tubeguard.button.KeyPolicy
+import io.github.iammosab.tubeguard.guard.YouTubeGuard
 import io.github.iammosab.tubeguard.shell.AdbKeepAlive
 import io.github.iammosab.tubeguard.update.Target
 import java.util.Date
@@ -38,7 +41,16 @@ class MainActivity : Activity() {
             findViewById<TextView>(R.id.button).setText(R.string.learn_prompt)
             findViewById<View>(R.id.learn).postDelayed({ refresh() }, 16_000)
         }
-        click(R.id.undo) { confirm(R.string.undo_confirm) { work { app.undo() } } }
+        click(R.id.undo) {
+            confirm(R.string.undo_confirm) {
+                work { app.undo().also { s -> setupResult(s.joinToString { "${it.name} ${if (it.ok) "✓" else "✗ ${it.detail}"}" }) } }
+            }
+        }
+        click(R.id.playStore) {
+            runCatching {
+                startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=${YouTubeGuard.YOUTUBE}")))
+            }
+        }
         click(R.id.uninstall) {
             confirm(R.string.uninstall_confirm) { work { app.adb.run("pm uninstall ${Target.TIZENTUBE.pkg}") } }
         }
@@ -80,6 +92,9 @@ class MainActivity : Activity() {
             Headline.NOT_PROTECTED_NO_ADB -> R.string.headline_no_adb to R.color.bad
             Headline.YOUTUBE_PRESENT -> R.string.headline_youtube to R.color.bad
             Headline.OFF -> R.string.headline_off to R.color.off
+            Headline.WATCHDOG_OFF -> R.string.headline_watchdog to R.color.bad
+            Headline.CHECK_FAILED -> R.string.headline_check_failed to R.color.bad
+            Headline.UNDO_INCOMPLETE -> R.string.headline_undo_incomplete to R.color.bad
         }
         headline.setText(text)
         headline.setBackgroundColor(getColor(color))
@@ -88,6 +103,8 @@ class MainActivity : Activity() {
 
         val needsSetup = !s.adbConnected || s.protection != "on"
         findViewById<View>(R.id.setupPanel).visibility = if (needsSetup) View.VISIBLE else View.GONE
+        findViewById<View>(R.id.playStore).visibility =
+            if (s.headline() == Headline.UNDO_INCOMPLETE) View.VISIBLE else View.GONE
 
         set(R.id.youtube, getString(when (s.youtubePresent) {
             true -> if (s.protection == "on") R.string.youtube_present_protected else R.string.youtube_present

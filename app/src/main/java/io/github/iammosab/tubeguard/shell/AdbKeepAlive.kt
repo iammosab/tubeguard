@@ -24,7 +24,7 @@ object AdbKeepAlive {
         context.checkSelfPermission(Manifest.permission.WRITE_SECURE_SETTINGS) == PackageManager.PERMISSION_GRANTED
 
     /** Runs on the app's background thread at boot. */
-    fun onBoot(context: Context, adb: LocalAdb, enabled: Boolean) {
+    fun onBoot(context: Context, adb: LocalAdb, enabled: Boolean, protecting: Boolean) {
         if (!canWriteSettings(context)) return
         val cr = context.contentResolver
         val services = Settings.Secure.getString(cr, "enabled_accessibility_services")
@@ -37,10 +37,11 @@ object AdbKeepAlive {
             }
             Log.i(LocalAdb.TAG, "keep ADB on: connected=${adb.connected}")
         }
-        if (services != null && OUR_SERVICE in AccessibilitySetting.entries(services)) {
-            // Android binds a service when the setting changes, so take ours out and put it back.
-            Settings.Secure.putString(cr, "enabled_accessibility_services", AccessibilitySetting.withoutService(services, OUR_SERVICE))
-            Settings.Secure.putString(cr, "enabled_accessibility_services", services)
-        }
+        if (!protecting) return
+        // Android binds a service when the setting changes, so ours is taken out and put back; and put back at
+        // all if a force-stop dropped it.
+        Settings.Secure.putString(cr, "enabled_accessibility_services", AccessibilitySetting.withoutService(services, OUR_SERVICE))
+        Settings.Secure.putString(cr, "enabled_accessibility_services", AccessibilitySetting.withService(services, OUR_SERVICE))
+        Settings.Secure.putInt(cr, Settings.Secure.ACCESSIBILITY_ENABLED, 1)
     }
 }
