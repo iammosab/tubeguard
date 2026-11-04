@@ -2,6 +2,7 @@ package io.github.iammosab.tubeguard.guard
 
 import io.github.iammosab.tubeguard.shell.Shell
 import io.github.iammosab.tubeguard.state.EventLog
+import io.github.iammosab.tubeguard.state.KeyValue
 
 sealed class GuardResult {
     object Absent : GuardResult()
@@ -15,11 +16,13 @@ class YouTubeGuard(
     private val shell: Shell,
     private val log: EventLog,
     private val packages: List<String> = listOf(YOUTUBE),
+    private val store: KeyValue? = null,
 ) {
     fun isPresent(pkg: String): Boolean = listing(pkg)?.let { it != NOT_LISTED } == true
 
     /** Removes every guarded package that is back; [trigger] says why we looked (boot, package_added, ...). */
     fun enforce(trigger: String): GuardResult {
+        if (store?.get("protection") == "off") return GuardResult.Absent
         var result: GuardResult = GuardResult.Absent
         for (pkg in packages) {
             val how = listing(pkg)
