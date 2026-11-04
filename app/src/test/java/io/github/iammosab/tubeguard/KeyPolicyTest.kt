@@ -60,4 +60,26 @@ class KeyPolicyTest {
         listOf("com.example.remote/.KeyService", "com.example.launcher/com.example.launcher.ButtonService"),
         KeyPolicy.otherKeyServices("com.example.remote/.KeyService:$OUR_SERVICE:com.example.launcher/com.example.launcher.ButtonService"),
     )
+
+    @Test
+    fun navigationKeysAreNotLearnedAndStillWork() {
+        val store = MapKeyValue()
+        val p = policy(store)
+        p.startLearning()
+        // DPAD up/down/left/right/centre, Back, Home, Enter: the owner still needs these (Back cancels).
+        listOf(19, 20, 21, 22, 23, 4, 3, 66).forEach { assertFalse("key $it", p.learn(it)) }
+        assertTrue(p.learning)
+        assertEquals(null, store.get("learnedKeyCode"))
+        assertTrue(p.learn(190))
+        assertEquals(190, p.lastLearned)
+    }
+
+    @Test
+    fun lastLearnedIsClearedWhenLearningStarts() {
+        val p = policy()
+        p.startLearning()
+        p.learn(190)
+        p.startLearning()
+        assertEquals(null, p.lastLearned)
+    }
 }

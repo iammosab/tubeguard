@@ -51,6 +51,8 @@ private sealed interface Screen {
 
 private enum class Ask { UNDO, UNINSTALL, REINSTALL, LEARN }
 
+private enum class LearnState { PREPARING, LISTENING, LEARNED, FAILED }
+
 /** The one activity: home, the setup walk-through, activity and settings, all driven by the remote. */
 class MainActivity : ComponentActivity() {
     private val app get() = App.of(this)
@@ -59,6 +61,7 @@ class MainActivity : ComponentActivity() {
     private var screen by mutableStateOf<Screen>(Screen.Home)
     private var ask by mutableStateOf<Ask?>(null)
     /** Read again whenever the owner comes back from the TV's settings. */
+    private var learnState by mutableStateOf(LearnState.PREPARING)
     private var device by mutableStateOf(DeviceState(developerOptions = false, usbDebugging = false))
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -149,7 +152,12 @@ class MainActivity : ComponentActivity() {
     private fun settingsActions() = SettingsActions(
         keepAdb = { on -> app.store.put(AdbKeepAlive.KEY, on.toString()); refresh() },
         takeOver = { on -> app.store.put(KeyPolicy.TAKE_OVER, on.toString()); refresh() },
-        learn = { app.keys.startLearning(); ask = Ask.LEARN },
+        learn = {
+            learnState = LearnState.PREPARING
+            ask = Ask.LEARN
+            // Listening only starts once every other binding on the remote is paused.
+            app.startLearning { ok -> runOnUiThread { learnState = if (ok) LearnState.LISTENING else LearnState.FAILED } }
+        },
         updateTizenTube = { work { app.updateTizenTube(app.versionOf(Target.TIZENTUBE.pkg), force = true) } },
         reinstallTizenTube = { ask = Ask.REINSTALL },
         uninstallTizenTube = { ask = Ask.UNINSTALL },
@@ -174,18 +182,40 @@ class MainActivity : ComponentActivity() {
                 work { app.reinstallTizenTube() }
             }
             Ask.LEARN -> {
-                // Closes itself once the key is caught, or after the 15 seconds learning lasts.
-                LaunchedEffect(Unit) {
-                    while (app.keys.learning) delay(300)
+                val close = {
+                    app.finishLearning()
                     ask = null
                     refresh()
                 }
+                LaunchedEffect(learnState) {
+                    when (learnState) {
+                        // Until a key is caught or the 15 seconds are up.
+                        LearnState.LISTENING -> {
+                            while (app.keys.learning) delay(200)
+                            if (app.keys.lastLearned != null) learnState = LearnState.LEARNED else close()
+                        }
+                        LearnState.LEARNED -> {
+                            delay(1_800)
+                            close()
+                        }
+                        else -> {}
+                    }
+                }
                 AlertDialog(
-                    onDismissRequest = dismiss,
-                    icon = { LoadingIndicator(Modifier.size(56.dp)) },
+                    onDismissRequest = close,
+                    icon = { if (learnState == LearnState.PREPARING || learnState == LearnState.LISTENING) LoadingIndicator(Modifier.size(56.dp)) },
                     title = { Text(stringResource(R.string.learn)) },
-                    text = { Text(stringResource(R.string.learn_prompt)) },
-                    confirmButton = {},
+                    text = {
+                        Text(
+                            when (learnState) {
+                                LearnState.PREPARING -> stringResource(R.string.learn_preparing)
+                                LearnState.LISTENING -> stringResource(R.string.learn_prompt)
+                                LearnState.LEARNED -> stringResource(R.string.learn_done, app.keys.lastLearned ?: 0)
+                                LearnState.FAILED -> stringResource(R.string.learn_failed)
+                            },
+                        )
+                    },
+                    confirmButton = { TextButton(close) { Text(stringResource(if (learnState == LearnState.LEARNED) R.string.done else R.string.cancel)) } },
                 )
             }
             null -> {}

@@ -14,3 +14,6 @@ interface Shell {
     /** Installs or updates [apk] as shell (`cmd package install`); ok when the output says Success. */
     fun install(apk: File): ShellResult
 }
+
+/** [value] single-quoted for the shell, whatever it holds. */
+fun shellQuote(value: String) = "'" + value.replace("'", "'\\''") + "'"

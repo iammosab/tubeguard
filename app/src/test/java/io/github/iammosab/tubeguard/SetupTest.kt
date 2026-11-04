@@ -43,6 +43,8 @@ class SetupTest {
         )
         assertTrue(steps.joinToString { it.toString() }, steps.all { it.ok })
         assertTrue("pm grant io.github.iammosab.tubeguard android.permission.WRITE_SECURE_SETTINGS" in shell.commands)
+        // TCL drops boot and update broadcasts for apps without its auto-start permission.
+        assertTrue("appops set io.github.iammosab.tubeguard AUTO_START allow" in shell.commands)
         assertTrue("pm uninstall -k --user 0 com.google.android.youtube.tv" in shell.commands)
         assertEquals(listOf(listOf("armeabi-v7a")), installs)
         assertTrue(shell.commands.any { it.startsWith("settings put global CustomKeyList") })
@@ -66,6 +68,7 @@ class SetupTest {
         assertTrue(shell.commands.none { it.startsWith("pm uninstall") || it.startsWith("install") })
         assertTrue(shell.commands.none { it.startsWith("settings put global") })
         assertTrue(installs.isEmpty())
+        assertTrue("appops set io.github.iammosab.tubeguard AUTO_START allow" in shell.commands)
         assertEquals("adopted", log.recent().first().kind)
         // The other app's service is kept next to ours.
         assertTrue(shell.commands.contains("settings put secure enabled_accessibility_services 'com.example.launcher/com.example.launcher.ButtonService:$OUR_SERVICE'"))

@@ -33,6 +33,7 @@ class Setup(
         steps += permission
         if (!permission.ok) return steps.also { log.add("setup_failed", "no ADB: ${permission.detail}") }
         store.put(PROTECTION, "on")
+        AdbKeepAlive.allowAutoStart(shell)
 
         val a11y = AccessibilitySetting.enable(shell, OUR_SERVICE)
         steps += StepResult("accessibility", a11y.ok, a11y.out)

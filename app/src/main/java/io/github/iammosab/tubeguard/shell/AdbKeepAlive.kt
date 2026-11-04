@@ -20,6 +20,12 @@ object AdbKeepAlive {
     fun grantSelf(shell: Shell): Boolean =
         shell.run("pm grant io.github.iammosab.tubeguard android.permission.WRITE_SECURE_SETTINGS").ok
 
+    /**
+     * TCL's own auto-start switch (app op AUTO_START): while it's "ignore", the TV drops boot and app-update
+     * broadcasts for the app, so nothing would restart the watch. Other brands don't have the op; that's fine.
+     */
+    fun allowAutoStart(shell: Shell): Boolean = shell.run("appops set io.github.iammosab.tubeguard AUTO_START allow").ok
+
     fun canWriteSettings(context: Context) =
         context.checkSelfPermission(Manifest.permission.WRITE_SECURE_SETTINGS) == PackageManager.PERMISSION_GRANTED
 

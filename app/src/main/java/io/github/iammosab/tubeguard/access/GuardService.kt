@@ -10,6 +10,7 @@ import android.util.Log
 import android.view.KeyEvent
 import android.view.accessibility.AccessibilityEvent
 import io.github.iammosab.tubeguard.App
+import io.github.iammosab.tubeguard.button.KeyPolicy
 import io.github.iammosab.tubeguard.button.TclKeys
 import io.github.iammosab.tubeguard.shell.LocalAdb
 
@@ -32,6 +33,7 @@ class GuardService : AccessibilityService() {
     }
 
     override fun onServiceConnected() {
+        running = true
         val filter = IntentFilter().apply {
             addAction(Intent.ACTION_PACKAGE_ADDED)
             addAction(Intent.ACTION_PACKAGE_REPLACED)
@@ -43,6 +45,7 @@ class GuardService : AccessibilityService() {
     }
 
     override fun onDestroy() {
+        running = false
         runCatching { unregisterReceiver(packages) }
         super.onDestroy()
     }
@@ -51,10 +54,18 @@ class GuardService : AccessibilityService() {
         val policy = App.of(this).keys
         Log.d(LocalAdb.TAG, "key ${event.keyCode} action ${event.action} handle=${policy.shouldHandle(event.keyCode)}")
         if (policy.learning) {
-            if (event.action == KeyEvent.ACTION_DOWN) {
-                policy.learn(event.keyCode)
+            // Navigation keys pass through (Back cancels); any other key is the one being learned, and both its
+            // press and release are swallowed so nothing else on the TV reacts to it.
+            if (KeyPolicy.isNavigation(event.keyCode)) return false
+            if (event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0 && policy.learn(event.keyCode)) {
                 App.of(this).log.add("button_learned", "key code ${event.keyCode}")
+                App.of(this).finishLearning()
+                swallowUpOf = event.keyCode
             }
+            return true
+        }
+        if (event.keyCode == swallowUpOf && event.action == KeyEvent.ACTION_UP) {
+            swallowUpOf = null
             return true
         }
         if (!policy.shouldHandle(event.keyCode)) return false
@@ -70,7 +81,17 @@ class GuardService : AccessibilityService() {
         return true
     }
 
+    /** The learned key's release, still to swallow after learning ended on its press. */
+    private var swallowUpOf: Int? = null
+
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {}
 
     override fun onInterrupt() {}
+
+    companion object {
+        /** True while Android has this service connected; read by the watchdog in the same process. */
+        @Volatile
+        var running = false
+            private set
+    }
 }

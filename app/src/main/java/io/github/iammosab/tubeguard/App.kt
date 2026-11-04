@@ -10,8 +10,10 @@ import android.content.Intent
 import android.os.Build
 import android.util.Log
 import io.github.iammosab.tubeguard.access.AccessibilitySetting
+import io.github.iammosab.tubeguard.access.GuardService
 import io.github.iammosab.tubeguard.access.OUR_SERVICE
 import io.github.iammosab.tubeguard.button.KeyPolicy
+import io.github.iammosab.tubeguard.button.LearnSession
 import io.github.iammosab.tubeguard.button.TclKeys
 import io.github.iammosab.tubeguard.flow.Setup
 import io.github.iammosab.tubeguard.flow.StepResult
@@ -40,9 +42,15 @@ class App : Application() {
     val guard by lazy { YouTubeGuard(adb, log, store = store) }
     val keys by lazy { KeyPolicy(store) }
     val tcl by lazy { TclKeys(adb, store) }
+    val learnSession by lazy { LearnSession(adb, store, tcl) }
     val updater by lazy { Updater(adb, UrlHttp(), log, cacheDir, store) }
     val watchdog by lazy {
-        Watchdog(adb, log, jobsPending = { Scheduler.pending(this) }, schedule = { Scheduler.schedule(this) })
+        Watchdog(
+            adb, log,
+            jobsPending = { Scheduler.pending(this) },
+            schedule = { Scheduler.schedule(this) },
+            serviceRunning = { GuardService.running },
+        )
     }
     /** Checks and changes, one at a time. */
     private val worker = Executors.newSingleThreadExecutor()
@@ -66,8 +74,26 @@ class App : Application() {
 
     fun checkNow(trigger: String) = background { checkNowBlocking(trigger) }
 
+    /**
+     * Pauses every other remote binding, then starts listening for the owner's YouTube button. [ready] is told
+     * (on the background thread) whether listening started; it only starts once the pause is in place.
+     */
+    fun startLearning(ready: (Boolean) -> Unit) = background {
+        val ok = learnSession.start()
+        if (ok) keys.startLearning()
+        ready(ok)
+    }
+
+    /** Ends learning (caught a key, timed out or cancelled) and puts every paused binding back. */
+    fun finishLearning() {
+        keys.stopLearning()
+        background { learnSession.finish(keys.lastLearned) }
+    }
+
     /** One check, on the calling (background) thread. */
     fun checkNowBlocking(trigger: String) {
+        // A learning session cut short (crash, force-stop, power off) leaves the other bindings paused.
+        if (!keys.learning && learnSession.restoreIfInterrupted()) log.add("learn_restored", "remote buttons put back")
         val result = guard.enforce(trigger)
         val guarding = store.get(Setup.PROTECTION) == "on"
         if (guarding && result !is GuardResult.Failed) store.put("lastCheck", System.currentTimeMillis().toString())
@@ -146,7 +172,8 @@ class App : Application() {
             appVersion = versionOf(packageName),
             appLatest = store.get("latest.${Target.SELF.name}"),
             log = log.recent(50),
-            watchdogOk = !connected || (OUR_SERVICE in AccessibilitySetting.entries(services) && a11yOn && Scheduler.pending(this)),
+            watchdogOk = !connected ||
+                (OUR_SERVICE in AccessibilitySetting.entries(services) && a11yOn && GuardService.running && Scheduler.pending(this)),
         )
     }
 

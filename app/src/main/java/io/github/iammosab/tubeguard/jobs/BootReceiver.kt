@@ -9,7 +9,9 @@ import io.github.iammosab.tubeguard.shell.AdbKeepAlive
 
 class BootReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
-        if (intent.action != Intent.ACTION_BOOT_COMPLETED) return
+        // After a restart, and after TubeGuard itself was updated (Android doesn't always start the service again).
+        if (intent.action != Intent.ACTION_BOOT_COMPLETED && intent.action != Intent.ACTION_MY_PACKAGE_REPLACED) return
+        val trigger = if (intent.action == Intent.ACTION_BOOT_COMPLETED) "boot" else "updated"
         Scheduler.schedule(context)
         val app = App.of(context)
         app.background {
@@ -19,7 +21,7 @@ class BootReceiver : BroadcastReceiver() {
                 protecting = app.store.get(Setup.PROTECTION) == "on",
             )
         }
-        app.checkNow("boot")
-        App.of(context).updateAll("boot")
+        app.checkNow(trigger)
+        app.updateAll(trigger)
     }
 }
