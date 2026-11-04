@@ -2,7 +2,12 @@ package io.github.iammosab.tubeguard.shell
 
 import android.content.Context
 import android.util.Log
+import io.github.muntashirakon.adb.AdbStream
+import java.io.ByteArrayOutputStream
 import java.io.File
+import java.io.IOException
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 
 /** [Shell] over the TV's own adbd: 127.0.0.1:5555 first, then whatever port mDNS advertises (Wireless debugging). */
 class LocalAdb(private val context: Context) : Shell {
@@ -46,8 +51,8 @@ class LocalAdb(private val context: Context) : Shell {
         if (!connect()) return ShellResult(NO_ADB, "ADB not connected")
         return try {
             adb.openStream("exec:cmd package install -S ${apk.length()}").use { stream ->
-                stream.openOutputStream().use { out -> apk.inputStream().use { it.copyTo(out) } }
-                val text = stream.openInputStream().bufferedReader().readText().trim()
+                stream.openOutputStream().let { out -> apk.inputStream().use { it.copyTo(out) }; out.flush() }
+                val text = readUntil(stream, INSTALL_TIMEOUT_MS) { INSTALL_DONE.containsMatchIn(it) }.trim()
                 ShellResult(if (text.contains("Success")) 0 else 1, text)
             }
         } catch (e: Exception) {
@@ -57,8 +62,37 @@ class LocalAdb(private val context: Context) : Shell {
         }
     }
 
-    private fun readAll(service: String): String =
-        adb.openStream(service).use { it.openInputStream().bufferedReader().readText() }.replace("\r", "")
+    private fun readAll(service: String): String = adb.openStream(service).use { stream ->
+        readUntil(stream, RUN_TIMEOUT_MS) { EXIT_LINE.containsMatchIn(it) }
+    }.replace("\r", "")
+
+    /**
+     * Reads until [done] holds for what has arrived, the stream ends, or [timeoutMs] passes. libadb-android can
+     * miss a close that comes in while a read is waiting and then wait forever, so callers say what the end of the
+     * output looks like instead of relying on the close; and it reports an ordinary end as "Stream closed.".
+     */
+    private fun readUntil(stream: AdbStream, timeoutMs: Long, done: (String) -> Boolean): String {
+        val reader = Thread.currentThread()
+        val alarm = timer.schedule({ reader.interrupt() }, timeoutMs, TimeUnit.MILLISECONDS)
+        val out = ByteArrayOutputStream()
+        val buf = ByteArray(16 * 1024)
+        try {
+            val input = stream.openInputStream()
+            while (!done(out.toString(Charsets.UTF_8.name()))) {
+                val n = try {
+                    input.read(buf, 0, buf.size)
+                } catch (e: IOException) {
+                    if (e.message == "Stream closed.") -1 else throw e
+                }
+                if (n < 0) break
+                out.write(buf, 0, n)
+            }
+        } finally {
+            alarm.cancel(false)
+            Thread.interrupted()
+        }
+        return out.toString(Charsets.UTF_8.name())
+    }
 
     private fun attempt(what: String, block: () -> Boolean): Boolean = try {
         block()
@@ -73,5 +107,10 @@ class LocalAdb(private val context: Context) : Shell {
         /** Exit code for "never reached the TV's ADB", so callers can tell it from a failed command. */
         const val NO_ADB = -100
         private const val EXIT = "__EXIT:"
+        private val EXIT_LINE = Regex("__EXIT:-?\\d+\\s")
+        private val INSTALL_DONE = Regex("(Success|Failure[^\\n]*)\\s")
+        private const val RUN_TIMEOUT_MS = 60_000L
+        private const val INSTALL_TIMEOUT_MS = 300_000L
+        private val timer = Executors.newSingleThreadScheduledExecutor()
     }
 }

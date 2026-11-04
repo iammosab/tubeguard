@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">TubeGuard</string>
+    <string name="service_description">Keeps official YouTube removed and sends the remote\'s YouTube button to TizenTube.</string>
 </resources>
