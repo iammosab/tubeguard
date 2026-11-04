@@ -86,6 +86,7 @@ class App : Application() {
     }
 
     fun setup(): List<StepResult> {
+        adb.connect(LocalAdb.SETUP_WAIT_MS)
         val steps = Setup(
             shell = adb,
             guard = guard,

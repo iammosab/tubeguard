@@ -15,12 +15,17 @@ class LocalAdb(private val context: Context) : Shell {
 
     val connected: Boolean get() = runCatching { adb.isConnected }.getOrDefault(false)
 
-    /** Connects if not already connected; false (never an exception) when the TV's ADB can't be reached. */
+    /**
+     * Connects if not already connected; false (never an exception) when the TV's ADB can't be reached or the
+     * "Allow USB debugging?" prompt isn't answered within [waitMs] (the library would otherwise wait forever).
+     */
     @Synchronized
-    fun connect(): Boolean {
+    fun connect(waitMs: Long = BACKGROUND_WAIT_MS): Boolean {
         if (connected) return true
+        adb.setTimeout(waitMs, TimeUnit.MILLISECONDS)
         val ok = attempt("tcp 5555") { adb.connect("127.0.0.1", 5555) } ||
             attempt("mdns") { adb.autoConnect(context.applicationContext, 5_000) }
+        if (!ok) runCatching { adb.disconnect() }
         Log.i(TAG, "connect: $ok")
         return ok
     }
@@ -106,6 +111,9 @@ class LocalAdb(private val context: Context) : Shell {
         const val TAG = "TubeGuard"
         /** Exit code for "never reached the TV's ADB", so callers can tell it from a failed command. */
         const val NO_ADB = -100
+        const val BACKGROUND_WAIT_MS = 10_000L
+        /** When the owner pressed Connect and has the TV's prompt in front of them. */
+        const val SETUP_WAIT_MS = 90_000L
         private const val EXIT = "__EXIT:"
         private val EXIT_LINE = Regex("__EXIT:-?\\d+\\s")
         private val INSTALL_DONE = Regex("(Success|Failure[^\\n]*)\\s")

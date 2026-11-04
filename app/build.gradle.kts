@@ -1,5 +1,12 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
+}
+
+// Release signing comes from keystore.properties (gitignored); without it only debug builds are possible.
+val signing = rootProject.file("keystore.properties").takeIf { it.exists() }?.let { f ->
+    Properties().apply { f.inputStream().use { load(it) } }
 }
 
 android {
@@ -12,6 +19,29 @@ android {
         targetSdk = 35
         versionCode = 1
         versionName = "1.0.0"
+        // TVs are ARM; the crypto libraries otherwise bring x86 builds too.
+        ndk { abiFilters += listOf("armeabi-v7a", "arm64-v8a") }
+    }
+
+    packaging {
+        // BouncyCastle's post-quantum tables; nothing here uses them.
+        resources.excludes += "org/bouncycastle/pqc/**"
+    }
+
+    signingConfigs {
+        if (signing != null) create("release") {
+            storeFile = file(signing.getProperty("storeFile"))
+            storePassword = signing.getProperty("storePassword")
+            keyAlias = signing.getProperty("keyAlias")
+            keyPassword = signing.getProperty("keyPassword")
+        }
+    }
+
+    buildTypes {
+        release {
+            isMinifyEnabled = false
+            signingConfig = signingConfigs.findByName("release")
+        }
     }
 
     compileOptions {
