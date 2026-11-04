@@ -9,6 +9,7 @@ class CheckJob : JobService() {
         val app = App.of(this)
         when (params.jobId) {
             Scheduler.CHECK -> app.checkNow("periodic")
+            Scheduler.UPDATE -> app.updateAll("daily")
         }
         app.background { jobFinished(params, false) }
         return true

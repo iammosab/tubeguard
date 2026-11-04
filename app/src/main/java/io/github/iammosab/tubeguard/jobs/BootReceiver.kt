@@ -10,5 +10,6 @@ class BootReceiver : BroadcastReceiver() {
         if (intent.action != Intent.ACTION_BOOT_COMPLETED) return
         Scheduler.schedule(context)
         App.of(context).checkNow("boot")
+        App.of(context).updateAll("boot")
     }
 }

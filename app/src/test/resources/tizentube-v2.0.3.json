@@ -1,0 +1,22 @@
+{
+ "tag_name": "v2.0.3",
+ "name": "TizenTube Cobalt v2.0.3",
+ "draft": false,
+ "prerelease": false,
+ "assets": [
+  {
+   "name": "cobalt-arm.apk",
+   "size": 80570825,
+   "digest": "sha256:72a3527f520db3a1b414916ad96481244e451c41e272ae33344ae5e79abb37dd",
+   "browser_download_url": "https://github.com/reisxd/TizenTubeCobalt/releases/download/v2.0.3/cobalt-arm.apk",
+   "content_type": "application/vnd.android.package-archive"
+  },
+  {
+   "name": "cobalt-arm64.apk",
+   "size": 153048724,
+   "digest": "sha256:4e3df211abb243cb06b06ba3676fe62c3d5b59baa47c1a0050cb180b3493e539",
+   "browser_download_url": "https://github.com/reisxd/TizenTubeCobalt/releases/download/v2.0.3/cobalt-arm64.apk",
+   "content_type": "application/vnd.android.package-archive"
+  }
+ ]
+}

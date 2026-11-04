@@ -10,4 +10,9 @@ class MainActivity : Activity() {
         super.onCreate(savedInstanceState)
         App.of(this).checkNow("app_open")
     }
+
+    override fun onResume() {
+        super.onResume()
+        App.of(this).updateAll("app_open")
+    }
 }
