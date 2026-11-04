@@ -4,12 +4,15 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import io.github.iammosab.tubeguard.App
+import io.github.iammosab.tubeguard.shell.AdbKeepAlive
 
 class BootReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         if (intent.action != Intent.ACTION_BOOT_COMPLETED) return
         Scheduler.schedule(context)
-        App.of(context).checkNow("boot")
+        val app = App.of(context)
+        app.background { AdbKeepAlive.onBoot(context, app.adb, app.store.get(AdbKeepAlive.KEY) != "false") }
+        app.checkNow("boot")
         App.of(context).updateAll("boot")
     }
 }
