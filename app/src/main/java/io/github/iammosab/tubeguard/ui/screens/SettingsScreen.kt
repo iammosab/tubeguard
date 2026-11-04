@@ -38,6 +38,7 @@ class SettingsActions(
     val checkAppUpdate: () -> Unit,
     val setUpAgain: () -> Unit,
     val undo: () -> Unit,
+    val openConflictingApp: () -> Unit,
 )
 
 @Composable
@@ -73,6 +74,14 @@ fun SettingsScreen(tvName: String?, status: Status?, actions: SettingsActions) {
                 }
                 SettingRow(stringResource(R.string.take_over), detail, checked = s?.takeOver ?: false) {
                     actions.takeOver(!(s?.takeOver ?: false))
+                }
+            }
+            s?.keyConflict?.let { other ->
+                item {
+                    SettingRow(
+                        stringResource(R.string.conflict_title, other), stringResource(R.string.conflict_detail, other),
+                        danger = true, onClick = actions.openConflictingApp,
+                    )
                 }
             }
             item {

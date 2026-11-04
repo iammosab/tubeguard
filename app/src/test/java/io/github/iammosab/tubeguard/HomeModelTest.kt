@@ -137,4 +137,27 @@ class HomeModelTest {
         assertEquals("no second install while one runs", null, tile.action)
         assertEquals(0.45f, tile.progress)
     }
+
+    @Test
+    fun anotherAppReactingToTheButtonIsShown() {
+        val tile = good.copy(keyConflict = "Other Launcher").home(now).tiles[2]
+        assertEquals(Text(R.string.tile_button_tizentube), tile.value)
+        assertEquals(Text(R.string.tile_button_conflict, listOf("Other Launcher")), tile.support)
+        assertEquals(Tone.ATTENTION, tile.tone)
+    }
+
+    @Test
+    fun aPressThatDidNotOpenTizenTubeIsShownWithAFix() {
+        val tile = good.copy(buttonWorked = false).home(now).tiles[2]
+        assertEquals(Text(R.string.tile_button_failed), tile.value)
+        assertEquals(Tone.BAD, tile.tone)
+        assertEquals(TileAction.FIX_BUTTON, tile.action)
+    }
+
+    @Test
+    fun afterUndoTheButtonIsNotClaimed() {
+        val tile = good.copy(protection = "off", youtubePresent = true).home(now).tiles[2]
+        assertEquals(Text(R.string.tile_button_not_managed), tile.value)
+        assertEquals(null, tile.action)
+    }
 }

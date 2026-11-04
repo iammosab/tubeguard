@@ -29,6 +29,10 @@ class KeyPolicy(private val store: KeyValue, private val now: () -> Long = Syste
         return if (learned != null) keyCode == learned else keyCode in DEFAULT_CODES
     }
 
+    /** Whether [keyCode] is the button that should open TizenTube (the learned one or the usual ones). */
+    fun isTizenTubeKey(keyCode: Int): Boolean =
+        keyCode == store.get(LEARNED)?.toIntOrNull() || keyCode in DEFAULT_CODES
+
     fun startLearning() {
         lastLearned = null
         learningSince = now()

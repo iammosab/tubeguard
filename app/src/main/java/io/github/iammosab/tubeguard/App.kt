@@ -60,6 +60,49 @@ class App : Application() {
     private val updates = Executors.newSingleThreadExecutor()
     private val abis get() = Build.SUPPORTED_ABIS.toList()
 
+    /** When the TizenTube button was last pressed (any brand, take-over or not). */
+    @Volatile
+    var lastTizenTubeKeyAt: Long? = null
+        private set
+
+    /** Called by the accessibility service for every press of the TizenTube button. */
+    fun onTizenTubeKey() {
+        val at = System.currentTimeMillis()
+        lastTizenTubeKeyAt = at
+        // A moment later: did TizenTube really come up? That, not the settings, is what the home screen reports.
+        android.os.Handler(mainLooper).postDelayed({ background { verifyButton() } }, 1_500)
+        // If no other app reacts this time, an old warning no longer holds.
+        android.os.Handler(mainLooper).postDelayed({
+            if ((store.get(KEY_CONFLICT_AT)?.toLongOrNull() ?: 0) < at) {
+                store.put(KEY_CONFLICT, null)
+                store.put(KEY_CONFLICT_AT, null)
+            }
+        }, 2_500)
+    }
+
+    private fun verifyButton() {
+        if (store.get(Setup.PROTECTION) != "on" || !adb.connected) return
+        val top = adb.run("dumpsys activity activities | grep -E 'topResumedActivity|mResumedActivity'")
+        if (!top.ok) return
+        val worked = top.out.contains("${Target.TIZENTUBE.pkg}/")
+        if (!worked && store.get(BUTTON_WORKED) != "false") log.add("button_failed", "the TizenTube button didn't open TizenTube")
+        store.put(BUTTON_WORKED, worked.toString())
+    }
+
+    /** The owner asked to fix the button: rewrite TCL's table (making TCL reload it), or take the key over. */
+    fun fixButton() = background {
+        if (tcl.isTcl()) tcl.apply() else store.put(KeyPolicy.TAKE_OVER, "true")
+        store.put(BUTTON_WORKED, null)
+        log.add("button_fixed", "mapping written again")
+    }
+
+    /** Another app opened TubeGuard right after the TizenTube button: remembered for the home screen. */
+    fun onKeyConflict(appName: String) {
+        if (store.get(KEY_CONFLICT) != appName) log.add("key_conflict", "$appName also reacts to the TizenTube button")
+        store.put(KEY_CONFLICT, appName)
+        store.put(KEY_CONFLICT_AT, System.currentTimeMillis().toString())
+    }
+
     /** A TizenTube download or install running right now, for the screen to show. */
     @Volatile
     var tizenTubeWork: Progress? = null
@@ -203,6 +246,8 @@ class App : Application() {
             appLatest = store.get("latest.${Target.SELF.name}"),
             log = log.recent(50),
             tizenTubeWork = tizenTubeWork,
+            keyConflict = store.get(KEY_CONFLICT),
+            buttonWorked = store.get(BUTTON_WORKED)?.toBooleanStrictOrNull(),
             watchdogOk = !connected ||
                 (OUR_SERVICE in AccessibilitySetting.entries(services) && a11yOn && GuardService.running && Scheduler.pending(this)),
         )
@@ -229,6 +274,9 @@ class App : Application() {
         private const val CHANNEL = "protection"
         private const val SIGNATURE_MISMATCH = "tizentube.signatureMismatch"
         private const val REMOVED_BY_OWNER = "tizentube.removedByOwner"
+        private const val KEY_CONFLICT = "button.conflict"
+        private const val BUTTON_WORKED = "button.worked"
+        private const val KEY_CONFLICT_AT = "button.conflictAt"
         fun of(context: Context) = context.applicationContext as App
     }
 }

@@ -52,7 +52,9 @@ class GuardService : AccessibilityService() {
 
     override fun onKeyEvent(event: KeyEvent): Boolean {
         val policy = App.of(this).keys
-        Log.d(LocalAdb.TAG, "key ${event.keyCode} action ${event.action} handle=${policy.shouldHandle(event.keyCode)}")
+        if (event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0 && !policy.learning && policy.isTizenTubeKey(event.keyCode)) {
+            App.of(this).onTizenTubeKey()
+        }
         if (policy.learning) {
             // Navigation keys pass through (Back cancels); any other key is the one being learned, and both its
             // press and release are swallowed so nothing else on the TV reacts to it.

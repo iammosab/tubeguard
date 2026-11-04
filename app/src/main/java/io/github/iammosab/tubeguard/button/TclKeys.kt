@@ -62,6 +62,8 @@ class TclKeys(private val shell: Shell, private val store: KeyValue) {
             if (!shell.run("settings put global $key '${entry(code)}'").ok) return false
         }
         val merged = list + codes.map { it.toString() }.filter { it !in list }
+        // TCL keeps the table in memory and rereads it only when the list changes: empty it, then set it.
+        shell.run("settings put global $LIST '[]'")
         return shell.run("settings put global $LIST '${JSONArray(merged)}'").ok
     }
 

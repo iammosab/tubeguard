@@ -182,4 +182,16 @@ class TclKeysTest {
         val tv = Tv().apply { manufacturer = "Xiaomi" }
         assertTrue(TclKeys(FlakyTv(tv, setOf("CustomKeyList")), MapKeyValue()).isTcl())
     }
+
+    @Test
+    fun applyMakesTclReloadItsTable() {
+        // TCL keeps the table in memory and rereads it only when CustomKeyList changes: the list is set to empty
+        // and back, after every entry is written, so the new entries are always picked up.
+        val tv = Tv("CustomKeyList" to "[\"4065\",\"190\"]")
+        keys(tv).apply()
+        val writes = tv.commands.filter { it.startsWith("settings put global") }
+        assertEquals("settings put global CustomKeyList '[]'", writes[writes.size - 2])
+        assertTrue(writes.last().startsWith("settings put global CustomKeyList '[\"4065\",\"190\"]'"))
+        assertTrue(writes.dropLast(2).all { it.startsWith("settings put global CustomKey_") })
+    }
 }

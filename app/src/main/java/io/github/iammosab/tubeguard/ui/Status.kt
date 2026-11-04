@@ -29,6 +29,10 @@ data class Status(
     val watchdogOk: Boolean = true,
     /** A TizenTube download or install in progress, or null. */
     val tizenTubeWork: io.github.iammosab.tubeguard.update.Progress? = null,
+    /** The name of another app seen reacting to the TizenTube button too, or null. */
+    val keyConflict: String? = null,
+    /** Whether the last press of the TizenTube button really brought TizenTube up; null until one is seen. */
+    val buttonWorked: Boolean? = null,
 )
 
 fun Status.headline(): Headline = when {

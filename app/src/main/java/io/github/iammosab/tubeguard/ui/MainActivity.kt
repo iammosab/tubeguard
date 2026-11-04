@@ -27,6 +27,7 @@ import androidx.compose.ui.unit.dp
 import io.github.iammosab.tubeguard.App
 import io.github.iammosab.tubeguard.R
 import io.github.iammosab.tubeguard.button.KeyPolicy
+import io.github.iammosab.tubeguard.button.launchedByAnotherButtonApp
 import io.github.iammosab.tubeguard.guard.YouTubeGuard
 import io.github.iammosab.tubeguard.shell.AdbKeepAlive
 import io.github.iammosab.tubeguard.update.Target
@@ -71,6 +72,10 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        if (stepAsideFor(intent)) {
+            finish()
+            return
+        }
         val tvName = runCatching { Settings.Global.getString(contentResolver, "device_name") }.getOrNull()
         // While the screen is showing, keep its status current: things change behind it (the watch restarting
         // after an update, YouTube coming back), and a stale red or green would mislead.
@@ -91,6 +96,26 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        if (stepAsideFor(intent)) moveTaskToBack(true)
+    }
+
+    /**
+     * True when another button app opened TubeGuard right after the TizenTube button (it reacts to the same key):
+     * TubeGuard gets out of the way so TizenTube stays on screen, and remembers who did it.
+     */
+    private fun stepAsideFor(intent: Intent?): Boolean {
+        val launcher = intent?.action == Intent.ACTION_MAIN &&
+            (intent.hasCategory(Intent.CATEGORY_LEANBACK_LAUNCHER) || intent.hasCategory(Intent.CATEGORY_LAUNCHER))
+        val from = referrer?.takeIf { it.scheme == "android-app" }?.host
+        if (!launchedByAnotherButtonApp(System.currentTimeMillis(), app.lastTizenTubeKeyAt, from, launcher)) return false
+        val name = runCatching { packageManager.getApplicationLabel(packageManager.getApplicationInfo(from!!, 0)).toString() }
+            .getOrDefault(from!!)
+        app.onKeyConflict(name)
+        return true
     }
 
     override fun onResume() {
@@ -134,6 +159,7 @@ class MainActivity : ComponentActivity() {
                     when (action) {
                         TileAction.CHOOSE_BUTTON -> startLearning()
                         TileAction.INSTALL_TIZENTUBE -> { app.installTizenTube(); refreshSoon() }
+                        TileAction.FIX_BUTTON -> { app.fixButton(); refreshSoon() }
                     }
                 },
             )
@@ -184,6 +210,12 @@ class MainActivity : ComponentActivity() {
         checkAppUpdate = { app.updateAll("manual") },
         setUpAgain = { screen = Screen.Setup(SetupStep.DEVELOPER) },
         undo = { ask = Ask.UNDO },
+        openConflictingApp = {
+            // Opens the other button app (where its YouTube-button setting lives), found from the services list.
+            status?.otherKeyServices?.map { it.substringBefore('/') }?.firstNotNullOfOrNull { pkg ->
+                packageManager.getLeanbackLaunchIntentForPackage(pkg) ?: packageManager.getLaunchIntentForPackage(pkg)
+            }?.let { runCatching { startActivity(it) } }
+        },
     )
 
     private fun startLearning() {

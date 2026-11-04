@@ -16,7 +16,7 @@ enum class PrimaryAction { CHECK_NOW, SET_UP, FIX, REMOVE_NOW, REPAIR, PLAY_STOR
 enum class TileKind { YOUTUBE, TIZENTUBE, BUTTON, LAST_CHECK }
 
 /** What selecting a tile does, for the few tiles that invite an action. */
-enum class TileAction { CHOOSE_BUTTON, INSTALL_TIZENTUBE }
+enum class TileAction { CHOOSE_BUTTON, INSTALL_TIZENTUBE, FIX_BUTTON }
 
 data class Tile(
     val kind: TileKind,
@@ -89,13 +89,24 @@ private fun Status.tiles(now: Long): List<Tile> {
         )
     }
     val button = when {
+        // After Undo TubeGuard manages no button, whatever is left in TCL's table.
+        protection == "off" -> Tile(TileKind.BUTTON, R.string.tile_button, Text(R.string.tile_button_not_managed), Tone.NEUTRAL)
+        protection == null -> Tile(TileKind.BUTTON, R.string.tile_button, Text(R.string.tile_button_not_mapped), Tone.NEUTRAL)
+        // What a real press did beats what the settings say.
+        buttonWorked == false -> Tile(
+            TileKind.BUTTON, R.string.tile_button, Text(R.string.tile_button_failed), Tone.BAD,
+            support = Text(R.string.tile_button_fix), action = TileAction.FIX_BUTTON,
+        )
+        buttonMapped && keyConflict != null -> Tile(
+            TileKind.BUTTON, R.string.tile_button, Text(R.string.tile_button_tizentube), Tone.ATTENTION,
+            support = Text(R.string.tile_button_conflict, listOf(keyConflict)),
+        )
         buttonMapped -> Tile(TileKind.BUTTON, R.string.tile_button, Text(R.string.tile_button_tizentube), Tone.NEUTRAL)
         // Protected but no button opens TizenTube yet: the tile becomes an invitation to choose one.
-        protection == "on" -> Tile(
+        else -> Tile(
             TileKind.BUTTON, R.string.tile_button, Text(R.string.tile_button_none), Tone.ATTENTION,
             support = Text(R.string.tile_button_choose), action = TileAction.CHOOSE_BUTTON,
         )
-        else -> Tile(TileKind.BUTTON, R.string.tile_button, Text(R.string.tile_button_not_mapped), Tone.NEUTRAL)
     }
     val check = Tile(TileKind.LAST_CHECK, R.string.tile_last_check, ago(lastCheck, now), Tone.NEUTRAL)
     return listOf(youtube, tizenTube, button, check)

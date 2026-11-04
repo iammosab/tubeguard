@@ -63,6 +63,12 @@
     <string name="tile_button_tizentube">Opens TizenTube</string>
     <string name="tile_button_none">No button yet</string>
     <string name="tile_button_choose">Choose one ›</string>
+    <string name="tile_button_conflict">%1$s also reacts ›</string>
+    <string name="conflict_title">%1$s also reacts to this button</string>
+    <string name="conflict_detail">It opens something else on the same press. In %1$s, set its YouTube or remote-button option to TizenTube (or nothing). Select to open %1$s.</string>
+    <string name="tile_button_failed">Didn\'t open TizenTube</string>
+    <string name="tile_button_fix">Fix ›</string>
+    <string name="tile_button_not_managed">Not managed</string>
     <string name="tile_button_not_mapped">Not changed</string>
     <string name="tile_last_check">Last check</string>
     <string name="ago_now">Just now</string>
@@ -86,6 +92,9 @@
     <string name="event_reinstall">Reinstalling TizenTube</string>
     <string name="event_tizentube_missing">TizenTube was missing</string>
     <string name="event_tizentube_removed">You uninstalled TizenTube</string>
+    <string name="event_key_conflict">Another app reacts to the TizenTube button</string>
+    <string name="event_button_failed">The button didn\'t open TizenTube</string>
+    <string name="event_button_fixed">Button mapping written again</string>
     <string name="event_other">Note</string>
     <string name="event_brought_back_by">Brought back by %1$s</string>
 
