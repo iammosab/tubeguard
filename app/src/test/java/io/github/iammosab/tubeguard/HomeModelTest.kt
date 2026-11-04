@@ -101,8 +101,12 @@ class HomeModelTest {
     }
 
     @Test
-    fun noButtonInvitationBeforeSetup() =
-        assertEquals(null, good.copy(protection = null, isTcl = false, tclMapped = false).home(now).tiles[2].action)
+    fun beforeSetupTheTileStillInvitesChoosing() {
+        val tile = good.copy(protection = null, isTcl = false, tclMapped = false).home(now).tiles[2]
+        assertEquals(Text(R.string.tile_button_not_mapped), tile.value)
+        assertEquals(Text(R.string.tile_button_choose), tile.support)
+        assertEquals(TileAction.CHOOSE_BUTTON, tile.action)
+    }
 
     @Test
     fun agoRanges() {
@@ -155,9 +159,10 @@ class HomeModelTest {
     }
 
     @Test
-    fun afterUndoTheButtonIsNotClaimed() {
+    fun afterUndoTheButtonIsNotClaimedButCanBeChosen() {
         val tile = good.copy(protection = "off", youtubePresent = true).home(now).tiles[2]
         assertEquals(Text(R.string.tile_button_not_managed), tile.value)
-        assertEquals(null, tile.action)
+        assertEquals(Text(R.string.tile_button_choose), tile.support)
+        assertEquals(TileAction.CHOOSE_BUTTON, tile.action)
     }
 }

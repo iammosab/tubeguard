@@ -90,8 +90,15 @@ private fun Status.tiles(now: Long): List<Tile> {
     }
     val button = when {
         // After Undo TubeGuard manages no button, whatever is left in TCL's table.
-        protection == "off" -> Tile(TileKind.BUTTON, R.string.tile_button, Text(R.string.tile_button_not_managed), Tone.NEUTRAL)
-        protection == null -> Tile(TileKind.BUTTON, R.string.tile_button, Text(R.string.tile_button_not_mapped), Tone.NEUTRAL)
+        // Choosing still works from here: the screen sets TubeGuard up first, then asks for the button.
+        protection == "off" -> Tile(
+            TileKind.BUTTON, R.string.tile_button, Text(R.string.tile_button_not_managed), Tone.ATTENTION,
+            support = Text(R.string.tile_button_choose), action = TileAction.CHOOSE_BUTTON,
+        )
+        protection == null -> Tile(
+            TileKind.BUTTON, R.string.tile_button, Text(R.string.tile_button_not_mapped), Tone.ATTENTION,
+            support = Text(R.string.tile_button_choose), action = TileAction.CHOOSE_BUTTON,
+        )
         // What a real press did beats what the settings say.
         buttonWorked == false -> Tile(
             TileKind.BUTTON, R.string.tile_button, Text(R.string.tile_button_failed), Tone.BAD,

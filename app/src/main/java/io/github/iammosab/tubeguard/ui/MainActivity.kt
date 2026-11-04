@@ -68,6 +68,8 @@ class MainActivity : ComponentActivity() {
     private var ask by mutableStateOf<Ask?>(null)
     /** Read again whenever the owner comes back from the TV's settings. */
     private var learnState by mutableStateOf(LearnPhase.PREPARING)
+    /** Set when the owner chose "Choose one" before TubeGuard was on: the button is asked for right after setup. */
+    private var chooseAfterSetup = false
     private var device by mutableStateOf(DeviceState(developerOptions = false, usbDebugging = false))
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -146,7 +148,7 @@ class MainActivity : ComponentActivity() {
 
     @Composable
     private fun Content(tvName: String?) {
-        BackHandler(enabled = screen != Screen.Home) { screen = Screen.Home }
+        BackHandler(enabled = screen != Screen.Home) { chooseAfterSetup = false; screen = Screen.Home }
         when (val current = screen) {
             Screen.Home -> HomeScreen(
                 model = status?.home(System.currentTimeMillis()),
@@ -157,7 +159,12 @@ class MainActivity : ComponentActivity() {
                 onSettings = { screen = Screen.Settings },
                 onTile = { action ->
                     when (action) {
-                        TileAction.CHOOSE_BUTTON -> startLearning()
+                        TileAction.CHOOSE_BUTTON -> when (status?.protection) {
+                            "on" -> startLearning()
+                            // Choosing needs TubeGuard running: set it up (or back on) first, then ask.
+                            "off" -> { chooseAfterSetup = true; screen = Screen.Setup(SetupStep.ALLOW) }
+                            else -> { chooseAfterSetup = true; screen = Screen.Setup(SetupStep.DEVELOPER) }
+                        }
                         TileAction.INSTALL_TIZENTUBE -> { app.installTizenTube(); refreshSoon() }
                         TileAction.FIX_BUTTON -> { app.fixButton(); refreshSoon() }
                     }
@@ -179,7 +186,14 @@ class MainActivity : ComponentActivity() {
                         runOnUiThread { done(ok) }
                     }
                 },
-                onFinish = { screen = Screen.Home; refresh() },
+                onFinish = {
+                    screen = Screen.Home
+                    refresh()
+                    if (chooseAfterSetup) {
+                        chooseAfterSetup = false
+                        startLearning()
+                    }
+                },
                 device = device,
                 canOpen = { it.intent(this) != null },
                 onOpen = { page -> page.intent(this)?.let { runCatching { startActivity(it) } } },
