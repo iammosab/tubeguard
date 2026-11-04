@@ -53,7 +53,6 @@ class GuardService : AccessibilityService() {
 
     override fun onKeyEvent(event: KeyEvent): Boolean {
         val policy = App.of(this).keys
-        if (event.action == KeyEvent.ACTION_DOWN) Log.d(LocalAdb.TAG, "key ${event.keyCode}")
         if (event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0 && !policy.learning && policy.isTizenTubeKey(event.keyCode)) {
             App.of(this).onTizenTubeKey()
             pulls = 0
@@ -91,7 +90,6 @@ class GuardService : AccessibilityService() {
         if (event?.eventType != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) return
         val shown = event.packageName?.toString() ?: return
         val app = App.of(this)
-        Log.d(LocalAdb.TAG, "window $shown (key ${app.lastTizenTubeKeyAt?.let { System.currentTimeMillis() - it }} ms ago)")
         if (!shouldPullTizenTubeBack(System.currentTimeMillis(), app.lastTizenTubeKeyAt, shown, pulls)) return
         // Another binding on the same key put its app over TizenTube: put TizenTube back on top.
         pulls++
