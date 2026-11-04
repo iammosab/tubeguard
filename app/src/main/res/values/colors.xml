@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="brand">#FFC62828</color>
+    <color name="icon_background">#FF131314</color>
     <color name="good">#FF1E6B3A</color>
     <color name="bad">#FFB3261E</color>
     <color name="off">#FF5F6368</color>

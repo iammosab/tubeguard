@@ -1,0 +1,31 @@
+{
+  "brand": "TubeGuard",
+  "tagline": "Official YouTube stays off. TizenTube stays on.",
+  "brief": "An Android TV app that removes official YouTube, keeps it removed, and keeps TizenTube installed and current. It should feel calm, solid and protective, and match the app's dark Material 3 Expressive screens.",
+  "adjectives": ["calm", "solid", "protective", "modern"],
+  "criteria": "Success: no shield or padlock cliché, nothing that resembles YouTube's mark, recognisable at 16 px and on a TV launcher, works in one colour.",
+  "mockups": ["app-icon", "readme", "favicon-tab", "website", "sticker", "social"],
+  "nav": ["How it works", "Install", "Undo"],
+  "brand_color": "#FFB4A9",
+  "tile_color": "#131314",
+  "greyscale": false,
+  "designer": "TubeGuard",
+  "round": 2,
+  "concepts": [
+    {
+      "name": "Seal",
+      "symbol": "../masters/tubeguard-symbol.svg",
+      "lockup": "../masters/tubeguard-horizontal.svg",
+      "symbol_on_tile": "symbol/tubeguard-symbol-mono-ffb4a9.svg",
+      "lockup_on_dark": "lockups/tubeguard-horizontal-mono-ffb4a9.svg",
+      "idea": "The scalloped shape from the app's own screens becomes a seal of protection, with play cut out of its centre.",
+      "rationale": [
+        "Protection told by a seal, not the usual shield or padlock",
+        "The same shape language as the app's Material 3 Expressive UI",
+        "Bold silhouette and a large play: reads at 16 px and across the room on a TV"
+      ]
+    }
+  ],
+  "recommendation": "Seal: one shape for the icon, the banner and the app, in salmon on charcoal.",
+  "next_steps": ["Ship it in v1.0.0", "Use the seal outline as the app's loading and empty-state shape", "Trademark search before wider distribution"]
+}

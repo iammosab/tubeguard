@@ -1,8 +1,8 @@
 package io.github.iammosab.tubeguard.ui.components
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -26,6 +25,7 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import io.github.iammosab.tubeguard.R
@@ -75,28 +75,10 @@ fun TileIcon(kind: TileKind, tone: Tone, modifier: Modifier = Modifier) {
     }
 }
 
-/** The shield in the logo. */
-@Composable
-fun ShieldMark(color: Color, modifier: Modifier = Modifier) = Canvas(modifier) {
-    val u = size.minDimension / 24f
-    drawPath(
-        Path().apply {
-            moveTo(12 * u, 2 * u); lineTo(20 * u, 5.5f * u); lineTo(20 * u, 11.5f * u)
-            cubicTo(20 * u, 16.5f * u, 16.6f * u, 20.8f * u, 12 * u, 22 * u)
-            cubicTo(7.4f * u, 20.8f * u, 4 * u, 16.5f * u, 4 * u, 11.5f * u)
-            lineTo(4 * u, 5.5f * u); close()
-        },
-        color,
-    )
-}
-
 @Composable
 fun TopBar(tvName: String?, title: String? = null) {
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        Box(
-            Modifier.size(36.dp).clip(RoundedCornerShape(11.dp)).background(MaterialTheme.colorScheme.primary),
-            contentAlignment = Alignment.Center,
-        ) { ShieldMark(MaterialTheme.colorScheme.onPrimary, Modifier.size(20.dp)) }
+        Image(painterResource(R.drawable.ic_logo), contentDescription = null, modifier = Modifier.size(38.dp))
         Spacer(Modifier.width(12.dp))
         Text(
             title ?: stringResource(R.string.app_name), style = MaterialTheme.typography.titleLarge,
