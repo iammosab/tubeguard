@@ -4,6 +4,7 @@ import android.app.Application
 import android.content.Context
 import android.os.Build
 import android.util.Log
+import io.github.iammosab.tubeguard.button.KeyPolicy
 import io.github.iammosab.tubeguard.guard.YouTubeGuard
 import io.github.iammosab.tubeguard.shell.LocalAdb
 import io.github.iammosab.tubeguard.state.EventLog
@@ -19,6 +20,7 @@ class App : Application() {
     val store by lazy { PrefsKeyValue(this) }
     val log by lazy { EventLog(store) }
     val guard by lazy { YouTubeGuard(adb, log) }
+    val keys by lazy { KeyPolicy(store) }
     val updater by lazy { Updater(adb, UrlHttp(), log, cacheDir, store) }
     private val worker = Executors.newSingleThreadExecutor()
 
