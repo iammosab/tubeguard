@@ -31,6 +31,9 @@ import io.github.iammosab.tubeguard.guard.YouTubeGuard
 import io.github.iammosab.tubeguard.shell.AdbKeepAlive
 import io.github.iammosab.tubeguard.update.Target
 import io.github.iammosab.tubeguard.ui.screens.ActivityScreen
+import io.github.iammosab.tubeguard.ui.screens.DeviceState
+import io.github.iammosab.tubeguard.ui.screens.intent
+import io.github.iammosab.tubeguard.ui.screens.readDeviceState
 import io.github.iammosab.tubeguard.ui.screens.HomeScreen
 import io.github.iammosab.tubeguard.ui.screens.SettingsActions
 import io.github.iammosab.tubeguard.ui.screens.SettingsScreen
@@ -55,6 +58,8 @@ class MainActivity : ComponentActivity() {
     private var busy by mutableStateOf(false)
     private var screen by mutableStateOf<Screen>(Screen.Home)
     private var ask by mutableStateOf<Ask?>(null)
+    /** Read again whenever the owner comes back from the TV's settings. */
+    private var device by mutableStateOf(DeviceState(developerOptions = false, usbDebugging = false))
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -71,6 +76,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
+        device = readDeviceState(this)
         app.checkNow("app_open")
         app.updateAll("app_open")
         refresh()
@@ -120,6 +126,9 @@ class MainActivity : ComponentActivity() {
                     }
                 },
                 onFinish = { screen = Screen.Home; refresh() },
+                device = device,
+                canOpen = { it.intent(this) != null },
+                onOpen = { page -> page.intent(this)?.let { runCatching { startActivity(it) } } },
             )
             Screen.Activity -> ActivityScreen(tvName, status?.log.orEmpty()) { screen = Screen.Home }
             Screen.Settings -> SettingsScreen(tvName, status, settingsActions())

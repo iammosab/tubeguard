@@ -86,11 +86,26 @@ fun TvStatusArt(good: Boolean, modifier: Modifier = Modifier, inviting: Boolean 
     }
 }
 
-/** Step 1: About → Build, pressed seven times. */
+// The step pictures are animated: [t] runs from 0 to 1 and repeats, and each picture acts out its step.
+
+private fun lerp(a: Float, b: Float, f: Float) = a + (b - a) * f.coerceIn(0f, 1f)
+private fun phase(t: Float, from: Float, to: Float) = ((t - from) / (to - from)).coerceIn(0f, 1f)
+private val Ember = Color(0xFF561E17)
+private val Off = Color(0xFF5F5D60)
+
+private fun DrawScope.ring(u: Float, x: Float, y: Float, w: Float, h: Float, alpha: Float = 1f) =
+    drawRoundRect(
+        White.copy(alpha = alpha), Offset((x - 2.5f) * u, (y - 2.5f) * u), Size((w + 5) * u, (h + 5) * u),
+        CornerRadius((h / 2 + 2.5f) * u), style = Stroke(1.8f * u),
+    )
+
+/** Step 1: About → Build, pressed seven times: the remote's OK button presses and the count climbs to ×7. */
 @Composable
-fun BuildNumberArt(modifier: Modifier = Modifier) = Box(modifier) {
-    Canvas(Modifier.fillMaxSize()) { buildNumber() }
-    // "×7" sits on the badge drawn at (84, 4) on the 120 x 90 grid.
+fun BuildNumberArt(t: Float, modifier: Modifier = Modifier) = Box(modifier) {
+    val presses = (t / 0.7f * 7).toInt().coerceIn(0, 7)
+    val pressing = t < 0.7f && (t / 0.7f * 7) % 1f < 0.35f
+    Canvas(Modifier.fillMaxSize()) { buildNumber(presses, pressing) }
+    // The count sits on the badge drawn at (84, 4) on the 120 x 90 grid.
     BoxWithConstraints(Modifier.fillMaxSize()) {
         val u = minOf(maxWidth / 120f, maxHeight / 90f)
         val dx = (maxWidth - u * 120f) / 2
@@ -99,72 +114,79 @@ fun BuildNumberArt(modifier: Modifier = Modifier) = Box(modifier) {
             Modifier.offset(dx + u * 84f, dy + u * 4f).size(u * 22f, u * 12f),
             contentAlignment = Alignment.Center,
         ) {
-            Text("×7", color = White, fontWeight = FontWeight.Bold, fontSize = (u.value * 8f).sp)
+            Text(if (presses >= 7) "✓" else "×$presses", color = White, fontWeight = FontWeight.Bold, fontSize = (u.value * 8f).sp)
         }
     }
 }
 
-private fun DrawScope.buildNumber() {
+private fun DrawScope.buildNumber(presses: Int, pressing: Boolean) {
     grid { u ->
         box(u, 8f, 6f, 72f, 78f, 10f, Panel)
         listOf(14f, 28f, 42f).forEach { y -> box(u, 14f, y, 60f, 10f, 5f, Row) }
-        box(u, 14f, 58f, 60f, 14f, 7f, Accent)
-        box(u, 20f, 63f, 26f, 4f, 2f, Color(0xFF561E17))
-        // The remote, with "x7" on its centre button.
+        // "Build", with the remote's focus on it; it flashes with every press.
+        box(u, 14f, 58f, 60f, 14f, 7f, if (pressing) White else Accent)
+        box(u, 20f, 63f, 26f, 4f, 2f, Ember)
+        ring(u, 14f, 58f, 60f, 14f)
+        // The remote: its OK button sinks with every press.
         box(u, 88f, 18f, 24f, 62f, 12f, Ink)
-        drawCircle(Accent, 7 * u, Offset(100 * u, 36 * u))
+        drawCircle(if (pressing) Ember else Accent, (if (pressing) 6f else 7f) * u, Offset(100 * u, 36 * u))
         drawCircle(Panel, 2.2f * u, Offset(100 * u, 56 * u))
         drawCircle(Panel, 2.2f * u, Offset(100 * u, 66 * u))
-        box(u, 84f, 4f, 22f, 12f, 6f, StatusGreen)
+        box(u, 84f, 4f, 22f, 12f, 6f, if (presses >= 7) StatusGreen else Row)
     }
 }
 
-/** Step 2: Developer options → USB debugging, switched on. */
+/** Step 2: focus comes down to USB debugging and the switch slides on. */
 @Composable
-fun UsbDebuggingArt(modifier: Modifier = Modifier) = Canvas(modifier) {
+fun UsbDebuggingArt(t: Float, modifier: Modifier = Modifier) = Canvas(modifier) {
     grid { u ->
         box(u, 10f, 6f, 100f, 78f, 10f, Panel)
         box(u, 18f, 16f, 50f, 6f, 3f, Row)
         listOf(32f, 60f).forEach { y -> box(u, 18f, y, 84f, 14f, 7f, Row) }
         box(u, 18f, 46f, 84f, 14f, 7f, Accent)
-        box(u, 24f, 51f, 34f, 4f, 2f, Color(0xFF561E17))
-        // The switch, on.
-        box(u, 80f, 49f, 16f, 8f, 4f, StatusGreen)
-        drawCircle(White, 3.2f * u, Offset(92 * u, 53 * u))
+        box(u, 24f, 51f, 34f, 4f, 2f, Ember)
+        // Focus moves down from the row above, then OK flips the switch.
+        val ringY = lerp(32f, 46f, phase(t, 0.1f, 0.3f))
+        ring(u, 18f, ringY, 84f, 14f)
+        val on = phase(t, 0.45f, 0.6f)
+        box(u, 80f, 49f, 16f, 8f, 4f, androidx.compose.ui.graphics.lerp(Off, StatusGreen, on))
+        drawCircle(White, 3.2f * u, Offset(lerp(84f, 92f, on) * u, 53 * u))
     }
 }
 
-/** Step 3: the "Allow USB debugging?" prompt with "Always allow" ticked and Allow chosen. */
+/** Step 3: "Always allow" gets ticked, focus moves to Allow and it is pressed. */
 @Composable
-fun AllowArt(modifier: Modifier = Modifier) = Canvas(modifier) {
+fun AllowArt(t: Float, modifier: Modifier = Modifier) = Canvas(modifier) {
     grid { u ->
         box(u, 8f, 10f, 104f, 70f, 12f, Panel)
         box(u, 18f, 20f, 60f, 6f, 3f, Ink)
         box(u, 18f, 31f, 80f, 4f, 2f, Row)
-        // Always allow, ticked.
-        box(u, 18f, 42f, 10f, 10f, 2.5f, StatusGreen)
-        tick(u, listOf(20.5f to 47f, 22.5f to 49f, 26f to 44.5f), White, 1.8f)
+        val ticked = t > 0.25f
+        box(u, 18f, 42f, 10f, 10f, 2.5f, if (ticked) StatusGreen else Off)
+        if (ticked) tick(u, listOf(20.5f to 47f, 22.5f to 49f, 26f to 44.5f), White, 1.8f)
         box(u, 32f, 45f, 44f, 4f, 2f, Ink)
-        box(u, 18f, 60f, 34f, 12f, 6f, White)
-        box(u, 26f, 64.5f, 18f, 3f, 1.5f, Panel)
+        val pressed = t > 0.7f
+        box(u, 18f, 60f, 34f, 12f, 6f, if (pressed) StatusGreen else White)
+        box(u, 26f, 64.5f, 18f, 3f, 1.5f, if (pressed) White else Panel)
         box(u, 58f, 60f, 34f, 12f, 6f, Row)
-        // The remote's focus on Allow.
-        drawRoundRect(
-            Accent, Offset(15.5f * u, 57.5f * u), Size(39 * u, 17 * u), CornerRadius(8.5f * u),
-            style = Stroke(2f * u),
-        )
+        // The remote's focus: first on the checkbox, then down onto Allow.
+        val move = phase(t, 0.4f, 0.55f)
+        ring(u, lerp(15f, 18f, move), lerp(39f, 60f, move), lerp(64f, 34f, move), lerp(16f, 12f, move))
     }
 }
 
-/** Wireless debugging: a pairing code on screen. */
+/** Wireless debugging: the six-digit code going in, box by box. */
 @Composable
-fun PairingArt(modifier: Modifier = Modifier) = Canvas(modifier) {
+fun PairingArt(t: Float, modifier: Modifier = Modifier) = Canvas(modifier) {
     grid { u ->
         box(u, 10f, 8f, 100f, 74f, 12f, Panel)
         box(u, 20f, 18f, 48f, 6f, 3f, Ink)
-        listOf(20f, 41f, 62f, 83f).forEachIndexed { i, x ->
-            box(u, x, 36f, 17f, 22f, 6f, if (i == 0) Accent else Row)
+        val filled = (t / 0.8f * 6).toInt().coerceIn(0, 6)
+        (0 until 6).forEach { i ->
+            val x = 18f + i * 14.5f
+            box(u, x, 36f, 12f, 20f, 5f, if (i < filled) Accent else Row)
+            if (i == filled.coerceAtMost(5) && filled < 6) ring(u, x, 36f, 12f, 20f)
         }
-        box(u, 20f, 66f, 60f, 4f, 2f, Row)
+        box(u, 20f, 66f, 60f, 4f, 2f, if (filled == 6) StatusGreen else Row)
     }
 }

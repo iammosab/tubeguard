@@ -1,6 +1,11 @@
 package io.github.iammosab.tubeguard.ui.screens
 
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -80,6 +85,9 @@ fun SetupScreen(
     onConnect: (done: (ok: Boolean) -> Unit) -> Unit,
     onPair: (port: Int, code: String, done: (ok: Boolean) -> Unit) -> Unit,
     onFinish: () -> Unit,
+    device: DeviceState,
+    canOpen: (SettingsPage) -> Boolean,
+    onOpen: (SettingsPage) -> Unit,
 ) {
     var step by rememberSaveable { mutableStateOf(startAt) }
     var busy by remember { mutableStateOf(false) }
@@ -95,11 +103,19 @@ fun SetupScreen(
             label = "step",
         ) { s ->
             Row(Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(32.dp)) {
-                ArtPanel(s, busy, Modifier.weight(1f).fillMaxHeight())
-                Column(Modifier.weight(1f).fillMaxHeight(), verticalArrangement = Arrangement.Center) {
+                ArtPanel(s, busy, Modifier.weight(0.85f).fillMaxHeight())
+                Column(Modifier.weight(1.15f).fillMaxHeight(), verticalArrangement = Arrangement.Center) {
                     if (s != SetupStep.DONE) Progress(s.number())
                     Spacer(Modifier.height(20.dp))
                     Text(stringResource(title(s)), style = MaterialTheme.typography.headlineMedium)
+                    path(s)?.let {
+                        Spacer(Modifier.height(10.dp))
+                        PathLine(stringResource(it))
+                    }
+                    s.done(device)?.takeIf { it }?.let {
+                        Spacer(Modifier.height(12.dp))
+                        DoneChip(stringResource(if (s == SetupStep.DEVELOPER) R.string.setup_status_dev_on else R.string.setup_status_usb_on))
+                    }
                     Spacer(Modifier.height(12.dp))
                     Text(
                         stringResource(body(s)), style = MaterialTheme.typography.bodyLarge,
@@ -125,16 +141,24 @@ fun SetupScreen(
                         )
                     }
                     Spacer(Modifier.height(28.dp))
+                    // Until the TV shows the step as done, the main button opens the right settings page.
+                    val page = s.page()?.takeIf { canOpen(it) && s.done(device) != true }
+                    val open = page?.let { openLabel(it) to { onOpen(it) } }
                     when (s) {
                         SetupStep.DEVELOPER -> Buttons(
-                            primary = R.string.setup_next to { go(SetupStep.USB) },
+                            primary = open ?: (R.string.setup_next to { go(SetupStep.USB) }),
+                            also = if (open != null) R.string.setup_next to { go(SetupStep.USB) } else null,
                         )
                         SetupStep.USB -> Buttons(
-                            primary = R.string.setup_next to { go(SetupStep.ALLOW) },
+                            primary = open ?: (R.string.setup_next to { go(SetupStep.ALLOW) }),
+                            also = if (open != null) R.string.setup_next to { go(SetupStep.ALLOW) } else null,
                             secondary = R.string.setup_wireless_only to { go(SetupStep.PAIR) },
                             back = { go(SetupStep.DEVELOPER) },
                         )
-                        SetupStep.PAIR -> PairForm(busy, onBack = { go(SetupStep.USB) }) { port, code ->
+                        SetupStep.PAIR -> PairForm(
+                            busy, onBack = { go(SetupStep.USB) },
+                            open = SettingsPage.DEVELOPER_OPTIONS.takeIf(canOpen)?.let { { onOpen(it) } },
+                        ) { port, code ->
                             busy = true
                             onPair(port, code) { ok -> busy = false; if (ok) go(SetupStep.ALLOW) else failed = true }
                         }
@@ -172,6 +196,44 @@ private fun body(s: SetupStep) = when (s) {
     SetupStep.DONE -> R.string.setup_done_body
 }
 
+private fun path(s: SetupStep) = when (s) {
+    SetupStep.DEVELOPER -> R.string.setup_path_developer
+    SetupStep.USB -> R.string.setup_path_usb
+    SetupStep.PAIR -> R.string.setup_path_pair
+    else -> null
+}
+
+private fun openLabel(page: SettingsPage) = when (page) {
+    SettingsPage.ABOUT -> R.string.setup_open_about
+    SettingsPage.DEVELOPER_OPTIONS -> R.string.setup_open_developer
+}
+
+/** "Settings › System › About › Build" as small solid chips, so the way there can be seen at a glance. */
+@Composable
+private fun PathLine(path: String) {
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        path.split(" › ").forEachIndexed { i, part ->
+            if (i > 0) Text("›", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(
+                part, style = MaterialTheme.typography.labelMedium,
+                color = if (i == path.split(" › ").lastIndex) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.clip(CircleShape)
+                    .background(if (i == path.split(" › ").lastIndex) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceContainerHigh)
+                    .padding(horizontal = 12.dp, vertical = 6.dp),
+            )
+        }
+    }
+}
+
+@Composable
+private fun DoneChip(text: String) {
+    Text(
+        "✓  $text", style = MaterialTheme.typography.labelLarge, color = androidx.compose.ui.graphics.Color(0xFFE6F4EA),
+        modifier = Modifier.clip(CircleShape).background(androidx.compose.ui.graphics.Color(0xFF1E3A2A))
+            .padding(horizontal = 14.dp, vertical = 8.dp),
+    )
+}
+
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun ArtPanel(step: SetupStep, busy: Boolean, modifier: Modifier) {
@@ -186,11 +248,15 @@ private fun ArtPanel(step: SetupStep, busy: Boolean, modifier: Modifier) {
                 .background(if (done) androidx.compose.ui.graphics.Color(0xFF2C5A3F) else MaterialTheme.colorScheme.surfaceContainerHigh),
         )
         val art = Modifier.fillMaxWidth(0.78f).fillMaxHeight(0.62f)
+        // Each picture acts its step out on a loop: a few seconds, then a short pause on the finished state.
+        val t by rememberInfiniteTransition(label = "art").animateFloat(
+            0f, 1f, infiniteRepeatable(tween(4_800, easing = LinearEasing)), label = "t",
+        )
         when (step) {
-            SetupStep.DEVELOPER -> BuildNumberArt(art)
-            SetupStep.USB -> UsbDebuggingArt(art)
-            SetupStep.PAIR -> PairingArt(art)
-            SetupStep.ALLOW -> if (busy) LoadingIndicator(Modifier.size(120.dp)) else AllowArt(art)
+            SetupStep.DEVELOPER -> BuildNumberArt(t, art)
+            SetupStep.USB -> UsbDebuggingArt(t, art)
+            SetupStep.PAIR -> PairingArt(t, art)
+            SetupStep.ALLOW -> if (busy) LoadingIndicator(Modifier.size(120.dp)) else AllowArt(t, art)
             SetupStep.DONE -> TvStatusArt(good = true, modifier = art)
         }
     }
@@ -215,24 +281,38 @@ private fun Progress(current: Int) {
 }
 
 @Composable
-private fun Buttons(primary: Pair<Int, () -> Unit>, secondary: Pair<Int, () -> Unit>? = null, back: (() -> Unit)? = null) {
-    val focus = remember { FocusRequester() }
+private fun Buttons(
+    primary: Pair<Int, () -> Unit>,
+    also: Pair<Int, () -> Unit>? = null,
+    secondary: Pair<Int, () -> Unit>? = null,
+    back: (() -> Unit)? = null,
+) {
+    // Keyed on the main button, so focus moves to "Done, next" once the TV shows the step as done.
+    val focus = remember(primary.first) { FocusRequester() }
     Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
         Row(horizontalArrangement = ButtonRow) {
             Pill(stringResource(primary.first), primary.second, Modifier.focusRequester(focus), style = PillStyle.PRIMARY)
-            if (back != null) Pill(stringResource(R.string.setup_back), back)
+            if (also != null) Pill(stringResource(also.first), also.second)
+            if (back != null && also == null) Pill(stringResource(R.string.setup_back), back)
         }
-        // The side path sits on its own line, so the main row never runs off the screen.
-        if (secondary != null) Pill(stringResource(secondary.first), secondary.second)
+        // The side path (and Back, when the main row is full) sit on their own line, so nothing runs off the screen.
+        if (secondary != null || (back != null && also != null)) {
+            Row(horizontalArrangement = ButtonRow) {
+                if (secondary != null) Pill(stringResource(secondary.first), secondary.second)
+                if (back != null && also != null) Pill(stringResource(R.string.setup_back), back)
+            }
+        }
     }
     FocusOnStart(focus)
 }
 
 @Composable
-private fun PairForm(busy: Boolean, onBack: () -> Unit, onPair: (Int, String) -> Unit) {
+private fun PairForm(busy: Boolean, onBack: () -> Unit, open: (() -> Unit)?, onPair: (Int, String) -> Unit) {
     var port by rememberSaveable { mutableStateOf("") }
     var code by rememberSaveable { mutableStateOf("") }
     val focus = remember { FocusRequester() }
+    // Focus starts on "Open Developer options" (the code is found there first); without that, on the port field.
+    val openFocus = remember { FocusRequester() }
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             OutlinedTextField(
@@ -252,8 +332,9 @@ private fun PairForm(busy: Boolean, onBack: () -> Unit, onPair: (Int, String) ->
                 { port.toIntOrNull()?.let { if (code.length == 6 && !busy) onPair(it, code) } },
                 style = PillStyle.PRIMARY,
             )
+            if (open != null) Pill(stringResource(R.string.setup_open_developer), open, Modifier.focusRequester(openFocus))
             Pill(stringResource(R.string.setup_back), onBack)
         }
     }
-    FocusOnStart(focus)
+    FocusOnStart(if (open != null) openFocus else focus)
 }

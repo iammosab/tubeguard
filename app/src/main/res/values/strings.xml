@@ -83,15 +83,22 @@
     <!-- Setup walk-through -->
     <string name="setup_step_of">Step %1$d of %2$d</string>
     <string name="setup_developer_title">Turn on Developer options</string>
-    <string name="setup_developer_body">On this TV open Settings → Device Preferences (or System) → About. Select Build and press OK seven times, until it says you\'re a developer.</string>
+    <string name="setup_developer_body">Select Build (on Google TV: Android TV OS build) and press OK seven times, until the TV says you\'re a developer. Then press Back.</string>
     <string name="setup_usb_title">Turn on USB debugging</string>
-    <string name="setup_usb_body">Go back to Device Preferences → Developer options and turn on USB debugging. If you also see Network debugging, turn that on too.</string>
+    <string name="setup_usb_body">Turn on USB debugging, and Network debugging if you see it. Then press Back.</string>
     <string name="setup_pair_title">Pair with Wireless debugging</string>
     <string name="setup_pair_body">In Developer options open Wireless debugging, turn it on and choose Pair device with pairing code. Type the port and the six-digit code it shows.</string>
     <string name="setup_allow_title">Let TubeGuard in</string>
     <string name="setup_allow_body">Press Connect. The TV asks “Allow USB debugging?” Tick Always allow, then choose Allow.</string>
     <string name="setup_done_title">All set</string>
     <string name="setup_done_body">Official YouTube is off this TV and TizenTube is installed. TubeGuard keeps it that way, and keeps TizenTube up to date.</string>
+    <string name="setup_path_developer">Settings › System › About › Build</string>
+    <string name="setup_path_usb">Settings › System › Developer options › USB debugging</string>
+    <string name="setup_path_pair">Developer options › Wireless debugging › Pair device</string>
+    <string name="setup_open_about">Open About</string>
+    <string name="setup_open_developer">Open Developer options</string>
+    <string name="setup_status_dev_on">Developer options are on</string>
+    <string name="setup_status_usb_on">USB debugging is on</string>
     <string name="setup_next">Done, next</string>
     <string name="setup_back">Back</string>
     <string name="setup_wireless_only">I only see Wireless debugging</string>
