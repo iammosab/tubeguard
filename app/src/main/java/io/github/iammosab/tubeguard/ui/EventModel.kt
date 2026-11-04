@@ -21,6 +21,8 @@ fun Event.describe(): EventView {
         "watchdog_restored" -> R.string.event_watchdog_restored to Tone.GOOD
         "button_learned" -> R.string.event_button_learned to Tone.NEUTRAL
         "tizentube_reinstall" -> R.string.event_reinstall to Tone.NEUTRAL
+        "tizentube_missing" -> R.string.event_tizentube_missing to Tone.NEUTRAL
+        "tizentube_removed" -> R.string.event_tizentube_removed to Tone.NEUTRAL
         else -> R.string.event_other to Tone.NEUTRAL
     }
     val installer = Regex("installer=(\\S+)").find(detail)?.groupValues?.get(1)

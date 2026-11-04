@@ -19,6 +19,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import io.github.iammosab.tubeguard.R
 import io.github.iammosab.tubeguard.ui.Status
+import io.github.iammosab.tubeguard.update.Progress
 import io.github.iammosab.tubeguard.ui.components.FocusOnStart
 import io.github.iammosab.tubeguard.ui.components.SectionLabel
 import io.github.iammosab.tubeguard.ui.components.SettingRow
@@ -84,10 +85,16 @@ fun SettingsScreen(tvName: String?, status: Status?, actions: SettingsActions) {
 
             item { SectionLabel(stringResource(R.string.tile_tizentube)) }
             item {
+                val work = s?.tizenTubeWork
                 SettingRow(
-                    stringResource(R.string.update_now),
-                    stringResource(R.string.version_line, s?.tizenTube ?: "—", s?.tizenTubeLatest?.removePrefix("v") ?: "—"),
-                    onClick = actions.updateTizenTube,
+                    stringResource(if (s != null && s.tizenTube == null) R.string.install_tizentube else R.string.update_now),
+                    when {
+                        work is Progress.Downloading -> stringResource(R.string.tile_tizentube_downloading, (work.fraction * 100).toInt())
+                        work == Progress.Installing -> stringResource(R.string.tile_tizentube_installing)
+                        s != null && s.tizenTube == null -> stringResource(R.string.install_tizentube_detail)
+                        else -> stringResource(R.string.version_line, s?.tizenTube ?: "—", s?.tizenTubeLatest?.removePrefix("v") ?: "—")
+                    },
+                    onClick = { if (work == null) actions.updateTizenTube() },
                 )
             }
             if (s?.signatureMismatch == true) {

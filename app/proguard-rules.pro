@@ -11,3 +11,6 @@
 -dontwarn javax.naming.**
 -dontwarn org.openjsse.**
 -dontwarn sun.security.**
+
+# Readable class names in the log (results like Installed, UpToDate) — only names, shrinking still applies.
+-keepnames class io.github.iammosab.tubeguard.** { *; }

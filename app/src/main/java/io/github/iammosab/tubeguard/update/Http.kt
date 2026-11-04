@@ -8,7 +8,8 @@ data class HttpResult(val code: Int, val body: String = "")
 
 interface Http {
     fun get(url: String): HttpResult
-    fun download(url: String, to: File): HttpResult
+    /** [progress] gets the bytes written so far, now and then. */
+    fun download(url: String, to: File, progress: (Long) -> Unit = {}): HttpResult
 }
 
 class UrlHttp : Http {
@@ -16,8 +17,24 @@ class UrlHttp : Http {
         HttpResult(c.responseCode, (if (c.responseCode < 400) c.inputStream else c.errorStream)?.bufferedReader()?.readText().orEmpty())
     }
 
-    override fun download(url: String, to: File): HttpResult = request(url) { c ->
-        if (c.responseCode == 200) c.inputStream.use { input -> to.outputStream().use { input.copyTo(it) } }
+    override fun download(url: String, to: File, progress: (Long) -> Unit): HttpResult = request(url) { c ->
+        if (c.responseCode == 200) {
+            c.inputStream.use { input ->
+                to.outputStream().use { out ->
+                    val buf = ByteArray(64 * 1024)
+                    var total = 0L
+                    var reported = 0L
+                    while (true) {
+                        val n = input.read(buf)
+                        if (n < 0) break
+                        out.write(buf, 0, n)
+                        total += n
+                        if (total - reported >= 512 * 1024) { reported = total; progress(total) }
+                    }
+                    progress(total)
+                }
+            }
+        }
         HttpResult(c.responseCode)
     }
 

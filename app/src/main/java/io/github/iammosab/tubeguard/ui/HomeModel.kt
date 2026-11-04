@@ -16,7 +16,7 @@ enum class PrimaryAction { CHECK_NOW, SET_UP, FIX, REMOVE_NOW, REPAIR, PLAY_STOR
 enum class TileKind { YOUTUBE, TIZENTUBE, BUTTON, LAST_CHECK }
 
 /** What selecting a tile does, for the few tiles that invite an action. */
-enum class TileAction { CHOOSE_BUTTON }
+enum class TileAction { CHOOSE_BUTTON, INSTALL_TIZENTUBE }
 
 data class Tile(
     val kind: TileKind,
@@ -25,6 +25,8 @@ data class Tile(
     val tone: Tone,
     val support: Text? = null,
     val action: TileAction? = null,
+    /** 0..1 while something runs for this tile (a download), else null. */
+    val progress: Float? = null,
 )
 
 data class HomeModel(val tone: Tone, val title: Text, val body: Text, val primary: PrimaryAction, val tiles: List<Tile>)
@@ -59,7 +61,23 @@ private fun Status.tiles(now: Long): List<Tile> {
         null -> Tile(TileKind.YOUTUBE, R.string.tile_youtube, Text(R.string.tile_unknown), Tone.BAD)
     }
     val latest = tizenTubeLatest?.removePrefix("v")
+    val work = tizenTubeWork
     val tizenTube = when {
+        work != null -> Tile(
+            TileKind.TIZENTUBE, R.string.tile_tizentube,
+            if (tizenTube == null) Text(R.string.tile_tizentube_missing) else Text(R.string.plain, listOf(tizenTube)),
+            Tone.ATTENTION,
+            support = when (work) {
+                is io.github.iammosab.tubeguard.update.Progress.Downloading ->
+                    Text(R.string.tile_tizentube_downloading, listOf((work.fraction * 100).toInt()))
+                io.github.iammosab.tubeguard.update.Progress.Installing -> Text(R.string.tile_tizentube_installing)
+            },
+            progress = (work as? io.github.iammosab.tubeguard.update.Progress.Downloading)?.fraction ?: 1f,
+        )
+        tizenTube == null && protection == "on" -> Tile(
+            TileKind.TIZENTUBE, R.string.tile_tizentube, Text(R.string.tile_tizentube_missing), Tone.ATTENTION,
+            support = Text(R.string.tile_tizentube_install), action = TileAction.INSTALL_TIZENTUBE,
+        )
         tizenTube == null -> Tile(TileKind.TIZENTUBE, R.string.tile_tizentube, Text(R.string.tile_tizentube_missing), Tone.NEUTRAL)
         latest != null && isNewer(latest, tizenTube) -> Tile(
             TileKind.TIZENTUBE, R.string.tile_tizentube, Text(R.string.plain, listOf(tizenTube)), Tone.NEUTRAL,

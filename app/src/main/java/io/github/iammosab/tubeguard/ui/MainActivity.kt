@@ -77,7 +77,8 @@ class MainActivity : ComponentActivity() {
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.RESUMED) {
                 while (true) {
-                    delay(10_000)
+                    // Every second while TizenTube downloads or installs (to show the progress), else every 10.
+                    delay(if (app.tizenTubeWork != null) 1_000 else 10_000)
                     if (!busy && ask == null) refresh()
                 }
             }
@@ -99,6 +100,9 @@ class MainActivity : ComponentActivity() {
         app.updateAll("app_open")
         refresh()
     }
+
+    /** A refresh shortly after starting background work, so its progress shows straight away. */
+    private fun refreshSoon() = lifecycleScope.launch { delay(700); refresh() }
 
     private fun refresh() = app.background {
         val s = app.status()
@@ -129,6 +133,7 @@ class MainActivity : ComponentActivity() {
                 onTile = { action ->
                     when (action) {
                         TileAction.CHOOSE_BUTTON -> startLearning()
+                        TileAction.INSTALL_TIZENTUBE -> { app.installTizenTube(); refreshSoon() }
                     }
                 },
             )
@@ -173,7 +178,7 @@ class MainActivity : ComponentActivity() {
         keepAdb = { on -> app.store.put(AdbKeepAlive.KEY, on.toString()); refresh() },
         takeOver = { on -> app.store.put(KeyPolicy.TAKE_OVER, on.toString()); refresh() },
         learn = ::startLearning,
-        updateTizenTube = { work { app.updateTizenTube(app.versionOf(Target.TIZENTUBE.pkg), force = true) } },
+        updateTizenTube = { app.installTizenTube(); refreshSoon() },
         reinstallTizenTube = { ask = Ask.REINSTALL },
         uninstallTizenTube = { ask = Ask.UNINSTALL },
         checkAppUpdate = { app.updateAll("manual") },
@@ -208,7 +213,7 @@ class MainActivity : ComponentActivity() {
                 screen = Screen.Home
             }
             Ask.UNINSTALL -> Confirm(R.string.uninstall_tizentube, R.string.uninstall_confirm, R.string.uninstall, dismiss) {
-                work { app.adb.run("pm uninstall ${Target.TIZENTUBE.pkg}") }
+                work { app.uninstallTizenTube() }
             }
             Ask.REINSTALL -> Confirm(R.string.reinstall, R.string.signature_note, R.string.reinstall_go, dismiss) {
                 work { app.reinstallTizenTube() }

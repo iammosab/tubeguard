@@ -53,6 +53,11 @@
     <string name="tile_tizentube">TizenTube</string>
     <string name="tile_tizentube_current">Up to date</string>
     <string name="tile_tizentube_update">%1$s available</string>
+    <string name="tile_tizentube_install">Install ›</string>
+    <string name="tile_tizentube_downloading">Downloading %1$d%%</string>
+    <string name="tile_tizentube_installing">Installing…</string>
+    <string name="install_tizentube">Install TizenTube</string>
+    <string name="install_tizentube_detail">Downloads the latest release from GitHub and installs it.</string>
     <string name="tile_tizentube_missing">Not installed</string>
     <string name="tile_button">Remote button</string>
     <string name="tile_button_tizentube">Opens TizenTube</string>
@@ -79,6 +84,8 @@
     <string name="event_watchdog_restored">Background watch put back</string>
     <string name="event_button_learned">Set a button for TizenTube</string>
     <string name="event_reinstall">Reinstalling TizenTube</string>
+    <string name="event_tizentube_missing">TizenTube was missing</string>
+    <string name="event_tizentube_removed">You uninstalled TizenTube</string>
     <string name="event_other">Note</string>
     <string name="event_brought_back_by">Brought back by %1$s</string>
 

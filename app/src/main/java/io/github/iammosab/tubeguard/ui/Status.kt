@@ -27,6 +27,8 @@ data class Status(
     val log: List<Event> = emptyList(),
     /** Our accessibility service listed and accessibility on, and both jobs scheduled. */
     val watchdogOk: Boolean = true,
+    /** A TizenTube download or install in progress, or null. */
+    val tizenTubeWork: io.github.iammosab.tubeguard.update.Progress? = null,
 )
 
 fun Status.headline(): Headline = when {

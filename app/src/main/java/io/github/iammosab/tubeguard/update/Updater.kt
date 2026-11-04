@@ -36,6 +36,7 @@ class Updater(
         abis: List<String>,
         force: Boolean = false,
         replace: Boolean = false,
+        progress: (Progress) -> Unit = {},
     ): UpdateResult {
         val page = http.get("https://api.github.com/repos/${target.repo}/releases/latest")
         if (page.code != 200) return fail(target, "release check: HTTP ${page.code}")
@@ -52,11 +53,16 @@ class Updater(
 
         val file = File(cacheDir, asset.name)
         try {
-            val got = http.download(asset.url, file)
+            var lastPercent = -1
+            val got = http.download(asset.url, file) { bytes ->
+                val percent = if (asset.size > 0) (bytes * 100 / asset.size).toInt().coerceIn(0, 100) else 0
+                if (percent != lastPercent) { lastPercent = percent; progress(Progress.Downloading(percent / 100f)) }
+            }
             if (got.code != 200) return fail(target, "download: HTTP ${got.code}")
             if (asset.sha256 != null && sha256(file) != asset.sha256.lowercase()) {
                 return fail(target, "download of ${asset.name} is corrupt (checksum)")
             }
+            progress(Progress.Installing)
             if (replace) shell.run("pm uninstall ${target.pkg}")
             var out = shell.install(file)
             if (out.out.contains("INSUFFICIENT_STORAGE")) {

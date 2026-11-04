@@ -25,6 +25,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.LinearWavyProgressIndicator
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialShapes
 import androidx.compose.material3.MaterialTheme
@@ -160,6 +161,7 @@ private fun Tiles(tiles: List<Tile>, onTile: (TileAction) -> Unit, modifier: Mod
     }
 }
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun StatusTile(tile: Tile, onTile: (TileAction) -> Unit, modifier: Modifier) {
     val tone = toneColors(tile.tone)
@@ -187,11 +189,16 @@ private fun StatusTile(tile: Tile, onTile: (TileAction) -> Unit, modifier: Modif
             Text(stringResource(tile.label), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Spacer(Modifier.height(4.dp))
             Text(tile.value.resolve(), style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onSurface, maxLines = 2)
+            tile.progress?.let {
+                Spacer(Modifier.height(6.dp))
+                LinearWavyProgressIndicator(progress = { it }, modifier = Modifier.fillMaxWidth())
+                Spacer(Modifier.height(4.dp))
+            }
             tile.support?.let {
                 Text(
                     it.resolve(), maxLines = 1,
-                    style = if (action != null) MaterialTheme.typography.labelLarge else MaterialTheme.typography.bodyMedium,
-                    color = if (action != null) tone.accent else MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = if (action != null || tile.progress != null) MaterialTheme.typography.labelLarge else MaterialTheme.typography.bodyMedium,
+                    color = if (action != null || tile.progress != null) tone.accent else MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
         }

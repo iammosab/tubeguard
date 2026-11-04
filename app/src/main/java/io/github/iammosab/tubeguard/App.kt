@@ -28,7 +28,9 @@ import io.github.iammosab.tubeguard.state.EventLog
 import io.github.iammosab.tubeguard.state.PrefsKeyValue
 import io.github.iammosab.tubeguard.ui.MainActivity
 import io.github.iammosab.tubeguard.ui.Status
+import io.github.iammosab.tubeguard.update.Progress
 import io.github.iammosab.tubeguard.update.Target
+import io.github.iammosab.tubeguard.update.shouldInstallTizenTube
 import io.github.iammosab.tubeguard.update.UpdateResult
 import io.github.iammosab.tubeguard.update.Updater
 import io.github.iammosab.tubeguard.update.UrlHttp
@@ -57,6 +59,11 @@ class App : Application() {
     /** Downloads and installs, so a 150 MB update never holds up a YouTube check. */
     private val updates = Executors.newSingleThreadExecutor()
     private val abis get() = Build.SUPPORTED_ABIS.toList()
+
+    /** A TizenTube download or install running right now, for the screen to show. */
+    @Volatile
+    var tizenTubeWork: Progress? = null
+        private set
 
     override fun onCreate() {
         super.onCreate()
@@ -104,14 +111,24 @@ class App : Application() {
         }
     }
 
-    /** Updates TizenTube (only if it is installed; installing it is setup's job) and then this app. */
+    /** Installs TizenTube if it went missing (not if the owner removed it), updates it, then updates this app. */
     fun updateAll(trigger: String) = updates.execute(guarded {
-        if (store.get(Setup.PROTECTION) != "off") versionOf(Target.TIZENTUBE.pkg)?.let { updateTizenTube(it, force = false) }
+        val installed = versionOf(Target.TIZENTUBE.pkg)
+        if (shouldInstallTizenTube(store.get(Setup.PROTECTION), installed, store.get(REMOVED_BY_OWNER) == "true")) {
+            log.add("tizentube_missing", "installing it again ($trigger)")
+            updateTizenTube(null, force = true)
+        } else if (installed != null && store.get(Setup.PROTECTION) != "off") {
+            updateTizenTube(installed, force = false)
+        }
         Log.i(LocalAdb.TAG, "update self ($trigger): ${updater.update(Target.SELF, versionOf(packageName), abis)}")
     })
 
     fun updateTizenTube(installed: String?, force: Boolean, replace: Boolean = false): UpdateResult {
-        val result = updater.update(Target.TIZENTUBE, installed, abis, force, replace)
+        val result = try {
+            updater.update(Target.TIZENTUBE, installed, abis, force, replace) { tizenTubeWork = it }
+        } finally {
+            tizenTubeWork = null
+        }
         when (result) {
             UpdateResult.SignatureMismatch -> store.put(SIGNATURE_MISMATCH, "true")
             is UpdateResult.Installed -> store.put(SIGNATURE_MISMATCH, null)
@@ -130,6 +147,19 @@ class App : Application() {
         return updateTizenTube(null, force = true, replace = true)
     }
 
+    /** The owner asked to install TizenTube: undoes "removed by owner" and installs it in the background. */
+    fun installTizenTube() {
+        store.put(REMOVED_BY_OWNER, null)
+        updates.execute(guarded { updateTizenTube(versionOf(Target.TIZENTUBE.pkg), force = true) })
+    }
+
+    /** The owner's own uninstall: remembered, so TubeGuard doesn't put TizenTube straight back. */
+    fun uninstallTizenTube() {
+        store.put(REMOVED_BY_OWNER, "true")
+        adb.run("pm uninstall ${Target.TIZENTUBE.pkg}")
+        log.add("tizentube_removed", "uninstalled from Settings")
+    }
+
     fun setup(): List<StepResult> {
         adb.connect(LocalAdb.SETUP_WAIT_MS, ask = true)
         val steps = Setup(
@@ -139,7 +169,7 @@ class App : Application() {
             log = log,
             store = store,
             tizenTubeVersion = { versionOf(Target.TIZENTUBE.pkg) },
-            installTizenTube = { updateTizenTube(null, force = true) },
+            installTizenTube = { store.put(REMOVED_BY_OWNER, null); updateTizenTube(null, force = true) },
             schedule = { Scheduler.schedule(this) },
         ).run(abis, tcl.isTcl())
         if (Build.VERSION.SDK_INT >= 33) adb.run("pm grant $packageName android.permission.POST_NOTIFICATIONS")
@@ -172,6 +202,7 @@ class App : Application() {
             appVersion = versionOf(packageName),
             appLatest = store.get("latest.${Target.SELF.name}"),
             log = log.recent(50),
+            tizenTubeWork = tizenTubeWork,
             watchdogOk = !connected ||
                 (OUR_SERVICE in AccessibilitySetting.entries(services) && a11yOn && GuardService.running && Scheduler.pending(this)),
         )
@@ -197,6 +228,7 @@ class App : Application() {
     companion object {
         private const val CHANNEL = "protection"
         private const val SIGNATURE_MISMATCH = "tizentube.signatureMismatch"
+        private const val REMOVED_BY_OWNER = "tizentube.removedByOwner"
         fun of(context: Context) = context.applicationContext as App
     }
 }

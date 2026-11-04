@@ -32,10 +32,12 @@ class UpdaterTest {
     private class FakeHttp(val pages: Map<String, HttpResult>, val files: Map<String, ByteArray>) : Http {
         val downloads = mutableListOf<String>()
         override fun get(url: String) = pages[url] ?: HttpResult(404)
-        override fun download(url: String, to: File): HttpResult {
+        override fun download(url: String, to: File, progress: (Long) -> Unit): HttpResult {
             downloads += url
             val bytes = files[url] ?: return HttpResult(404)
             to.writeBytes(bytes)
+            progress(bytes.size / 2L)
+            progress(bytes.size.toLong())
             return HttpResult(200)
         }
     }
@@ -172,5 +174,16 @@ class UpdaterTest {
     fun unknownForegroundDefers() {
         val shell = FakeShell(Regex("^dumpsys activity") to ShellResult(-100, "ADB connection lost"))
         assertTrue(updater(shell).update(Target.TIZENTUBE, "2.0.3", abis) is UpdateResult.Deferred)
+    }
+
+    @Test
+    fun progressGoesFromDownloadingToInstalling() {
+        val seen = mutableListOf<io.github.iammosab.tubeguard.update.Progress>()
+        val shell = FakeShell(notResumed, Regex("^install") to ShellResult(0, "Success"))
+        updater(shell).update(Target.TIZENTUBE, "2.0.3", abis, progress = { seen += it })
+        val fractions = seen.filterIsInstance<io.github.iammosab.tubeguard.update.Progress.Downloading>().map { it.fraction }
+        assertTrue(seen.toString(), fractions.any { it > 0f && it < 1f })
+        assertEquals(1f, fractions.last())
+        assertEquals(io.github.iammosab.tubeguard.update.Progress.Installing, seen.last())
     }
 }

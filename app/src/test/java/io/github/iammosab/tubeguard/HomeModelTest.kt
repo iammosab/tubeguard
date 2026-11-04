@@ -121,4 +121,20 @@ class HomeModelTest {
             good.copy(isTcl = false, tclMapped = false, takeOver = false).home(now).body,
         )
     }
+
+    @Test
+    fun missingTizenTubeInvitesInstalling() {
+        val tile = good.copy(tizenTube = null).home(now).tiles[1]
+        assertEquals(Text(R.string.tile_tizentube_missing), tile.value)
+        assertEquals(Text(R.string.tile_tizentube_install), tile.support)
+        assertEquals(TileAction.INSTALL_TIZENTUBE, tile.action)
+    }
+
+    @Test
+    fun installingShowsProgress() {
+        val tile = good.copy(tizenTube = null, tizenTubeWork = io.github.iammosab.tubeguard.update.Progress.Downloading(0.45f)).home(now).tiles[1]
+        assertEquals(Text(R.string.tile_tizentube_downloading, listOf(45)), tile.support)
+        assertEquals("no second install while one runs", null, tile.action)
+        assertEquals(0.45f, tile.progress)
+    }
 }
