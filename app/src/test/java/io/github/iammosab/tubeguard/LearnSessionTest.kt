@@ -52,9 +52,11 @@ class LearnSessionTest {
     @Test
     fun learnedKeyIsMappedOnTcl() {
         val tv = tv()
-        val s = session(tv)
+        val store = MapKeyValue()
+        val s = session(tv, store)
         s.start()
         s.finish(learned = 300)
+        assertEquals("TCL's table does the work; take-over stays as it was", null, store.get("takeOverButton"))
         val list = JSONArray(tv.global["CustomKeyList"])
         assertEquals(listOf("4065", "4066", "300"), (0 until list.length()).map { list.getString(it) })
         assertTrue(JSONObject(tv.global["CustomKey_300"]!!).toString().contains("io.gh.reisxd.tizentube.cobalt"))
@@ -87,12 +89,15 @@ class LearnSessionTest {
     @Test
     fun otherBrandsOnlyPauseOtherServices() {
         val tv = FakeTv(secure = mutableMapOf("enabled_accessibility_services" to "$otherService:$OUR_SERVICE"))
-        val s = session(tv)
+        val store = MapKeyValue()
+        val s = session(tv, store)
         assertTrue(s.start())
         assertEquals(OUR_SERVICE, tv.secure["enabled_accessibility_services"])
         assertTrue(tv.commands.none { it.contains("CustomKey") && !it.startsWith("settings get") })
         s.finish(learned = 300)
         assertEquals("$otherService:$OUR_SERVICE", tv.secure["enabled_accessibility_services"])
         assertEquals(null, tv.global["CustomKeyList"])
+        // Without TCL's table, TubeGuard itself has to catch the key, so take-over goes on.
+        assertEquals("true", store.get("takeOverButton"))
     }
 }

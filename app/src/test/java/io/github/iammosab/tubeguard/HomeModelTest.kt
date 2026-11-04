@@ -3,6 +3,7 @@ package io.github.iammosab.tubeguard
 import io.github.iammosab.tubeguard.ui.PrimaryAction
 import io.github.iammosab.tubeguard.ui.Status
 import io.github.iammosab.tubeguard.ui.Text
+import io.github.iammosab.tubeguard.ui.TileAction
 import io.github.iammosab.tubeguard.ui.Tone
 import io.github.iammosab.tubeguard.ui.ago
 import io.github.iammosab.tubeguard.ui.home
@@ -84,11 +85,24 @@ class HomeModelTest {
         assertEquals(PrimaryAction.PLAY_STORE, good.copy(protection = "off", youtubePresent = false).home(now).primary)
 
     @Test
-    fun unmappedButtonOnOtherBrands() =
-        assertEquals(
-            Text(R.string.tile_button_not_mapped),
-            good.copy(isTcl = false, tclMapped = false, takeOver = false).home(now).tiles[2].value,
-        )
+    fun unmappedButtonInvitesChoosingOne() {
+        val tile = good.copy(isTcl = false, tclMapped = false, takeOver = false).home(now).tiles[2]
+        assertEquals(Text(R.string.tile_button_none), tile.value)
+        assertEquals(Text(R.string.tile_button_choose), tile.support)
+        assertEquals(TileAction.CHOOSE_BUTTON, tile.action)
+        assertEquals(Tone.ATTENTION, tile.tone)
+    }
+
+    @Test
+    fun mappedButtonIsJustStatus() {
+        val tile = good.home(now).tiles[2]
+        assertEquals(Text(R.string.tile_button_tizentube), tile.value)
+        assertEquals(null, tile.action)
+    }
+
+    @Test
+    fun noButtonInvitationBeforeSetup() =
+        assertEquals(null, good.copy(protection = null, isTcl = false, tclMapped = false).home(now).tiles[2].action)
 
     @Test
     fun agoRanges() {

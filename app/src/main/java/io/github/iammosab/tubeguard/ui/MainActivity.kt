@@ -126,6 +126,11 @@ class MainActivity : ComponentActivity() {
                 onPrimary = ::primary,
                 onActivity = { screen = Screen.Activity },
                 onSettings = { screen = Screen.Settings },
+                onTile = { action ->
+                    when (action) {
+                        TileAction.CHOOSE_BUTTON -> startLearning()
+                    }
+                },
             )
             is Screen.Setup -> SetupScreen(
                 tvName = tvName,

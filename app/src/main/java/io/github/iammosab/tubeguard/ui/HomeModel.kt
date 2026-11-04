@@ -7,14 +7,25 @@ import io.github.iammosab.tubeguard.update.isNewer
 /** A string resource and its format arguments, resolved by the screen. */
 data class Text(@StringRes val res: Int, val args: List<Any> = emptyList())
 
-enum class Tone { GOOD, BAD, NEUTRAL }
+/** ATTENTION: not wrong, but something worth doing (the warm accent, never red). */
+enum class Tone { GOOD, BAD, NEUTRAL, ATTENTION }
 
 /** The one big button on the home screen; what it is depends on what needs doing. */
 enum class PrimaryAction { CHECK_NOW, SET_UP, FIX, REMOVE_NOW, REPAIR, PLAY_STORE, TURN_BACK_ON }
 
 enum class TileKind { YOUTUBE, TIZENTUBE, BUTTON, LAST_CHECK }
 
-data class Tile(val kind: TileKind, @StringRes val label: Int, val value: Text, val tone: Tone, val support: Text? = null)
+/** What selecting a tile does, for the few tiles that invite an action. */
+enum class TileAction { CHOOSE_BUTTON }
+
+data class Tile(
+    val kind: TileKind,
+    @StringRes val label: Int,
+    val value: Text,
+    val tone: Tone,
+    val support: Text? = null,
+    val action: TileAction? = null,
+)
 
 data class HomeModel(val tone: Tone, val title: Text, val body: Text, val primary: PrimaryAction, val tiles: List<Tile>)
 
@@ -59,11 +70,15 @@ private fun Status.tiles(now: Long): List<Tile> {
             support = if (latest != null) Text(R.string.tile_tizentube_current) else null,
         )
     }
-    val mapped = buttonMapped
-    val button = Tile(
-        TileKind.BUTTON, R.string.tile_button,
-        Text(if (mapped) R.string.tile_button_tizentube else R.string.tile_button_not_mapped), Tone.NEUTRAL,
-    )
+    val button = when {
+        buttonMapped -> Tile(TileKind.BUTTON, R.string.tile_button, Text(R.string.tile_button_tizentube), Tone.NEUTRAL)
+        // Protected but no button opens TizenTube yet: the tile becomes an invitation to choose one.
+        protection == "on" -> Tile(
+            TileKind.BUTTON, R.string.tile_button, Text(R.string.tile_button_none), Tone.ATTENTION,
+            support = Text(R.string.tile_button_choose), action = TileAction.CHOOSE_BUTTON,
+        )
+        else -> Tile(TileKind.BUTTON, R.string.tile_button, Text(R.string.tile_button_not_mapped), Tone.NEUTRAL)
+    }
     val check = Tile(TileKind.LAST_CHECK, R.string.tile_last_check, ago(lastCheck, now), Tone.NEUTRAL)
     return listOf(youtube, tizenTube, button, check)
 }

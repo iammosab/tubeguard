@@ -42,6 +42,7 @@ fun toneColors(tone: Tone) = when (tone) {
     Tone.GOOD -> ToneColors(Color(0xFF1E3A2A), Color(0xFF2C5A3F), Color(0xFF8FD6A5), Color(0xFFE6F4EA))
     Tone.BAD -> ToneColors(Color(0xFF4A1714), Color(0xFF6B2420), Color(0xFFFFB4A9), Color(0xFFFFEDEA))
     Tone.NEUTRAL -> ToneColors(Color(0xFF2B2A2C), Color(0xFF3A383B), Color(0xFFC9C5C7), Color(0xFFE6E1E3))
+    Tone.ATTENTION -> ToneColors(Color(0xFF3A2A28), Color(0xFF73332B), Color(0xFFFFB4A9), Color(0xFFFFDAD5))
 }
 
 val StatusGreen = Color(0xFF2F8F57)

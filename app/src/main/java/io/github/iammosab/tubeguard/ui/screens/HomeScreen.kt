@@ -8,6 +8,8 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -44,6 +46,7 @@ import io.github.iammosab.tubeguard.R
 import io.github.iammosab.tubeguard.ui.HomeModel
 import io.github.iammosab.tubeguard.ui.PrimaryAction
 import io.github.iammosab.tubeguard.ui.Tile
+import io.github.iammosab.tubeguard.ui.TileAction
 import io.github.iammosab.tubeguard.ui.Tone
 import io.github.iammosab.tubeguard.ui.components.ButtonRow
 import io.github.iammosab.tubeguard.ui.components.IconBadge
@@ -54,6 +57,7 @@ import io.github.iammosab.tubeguard.ui.components.TileIcon
 import io.github.iammosab.tubeguard.ui.components.TopBar
 import io.github.iammosab.tubeguard.ui.components.TvStatusArt
 import io.github.iammosab.tubeguard.ui.components.resolve
+import io.github.iammosab.tubeguard.ui.components.tvFocus
 import io.github.iammosab.tubeguard.ui.theme.SafeH
 import io.github.iammosab.tubeguard.ui.theme.SafeV
 import io.github.iammosab.tubeguard.ui.theme.toneColors
@@ -66,6 +70,7 @@ fun HomeScreen(
     onPrimary: (PrimaryAction) -> Unit,
     onActivity: () -> Unit,
     onSettings: () -> Unit,
+    onTile: (TileAction) -> Unit,
 ) {
     val first = remember { FocusRequester() }
     Column(Modifier.fillMaxSize().padding(horizontal = SafeH, vertical = SafeV)) {
@@ -73,7 +78,7 @@ fun HomeScreen(
         Spacer(Modifier.height(20.dp))
         Row(Modifier.weight(1f).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
             Hero(model, Modifier.weight(1.05f).fillMaxHeight())
-            Tiles(model?.tiles.orEmpty(), Modifier.weight(1f).fillMaxHeight())
+            Tiles(model?.tiles.orEmpty(), onTile, Modifier.weight(1f).fillMaxHeight())
         }
         Spacer(Modifier.height(20.dp))
         Row(horizontalArrangement = ButtonRow, verticalAlignment = Alignment.CenterVertically) {
@@ -145,24 +150,37 @@ private fun Hero(model: HomeModel?, modifier: Modifier) {
 }
 
 @Composable
-private fun Tiles(tiles: List<Tile>, modifier: Modifier) {
+private fun Tiles(tiles: List<Tile>, onTile: (TileAction) -> Unit, modifier: Modifier) {
     Column(modifier, verticalArrangement = Arrangement.spacedBy(12.dp)) {
         tiles.chunked(2).forEach { pair ->
             Row(Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                pair.forEach { StatusTile(it, Modifier.weight(1f).fillMaxHeight()) }
+                pair.forEach { StatusTile(it, onTile, Modifier.weight(1f).fillMaxHeight()) }
             }
         }
     }
 }
 
 @Composable
-private fun StatusTile(tile: Tile, modifier: Modifier) {
+private fun StatusTile(tile: Tile, onTile: (TileAction) -> Unit, modifier: Modifier) {
     val tone = toneColors(tile.tone)
+    val shape = RoundedCornerShape(28.dp)
+    // Only tiles that invite an action take focus; the rest are plain status.
+    val action = tile.action
+    val selectable = if (action == null) Modifier else Modifier.tvFocus(shape, grow = 1.03f).clip(shape)
+        .clickable(remember { MutableInteractionSource() }, indication = null) { onTile(action) }
     Column(
-        modifier.clip(RoundedCornerShape(28.dp)).background(MaterialTheme.colorScheme.surfaceContainer).padding(20.dp),
+        modifier.then(selectable).clip(shape)
+            .background(if (tile.tone == Tone.ATTENTION) tone.container else MaterialTheme.colorScheme.surfaceContainer)
+            .padding(20.dp),
         verticalArrangement = Arrangement.SpaceBetween,
     ) {
-        IconBadge(if (tile.tone == Tone.NEUTRAL) MaterialTheme.colorScheme.surfaceContainerHigh else tone.container) {
+        IconBadge(
+            when (tile.tone) {
+                Tone.NEUTRAL -> MaterialTheme.colorScheme.surfaceContainerHigh
+                Tone.ATTENTION -> tone.shape
+                else -> tone.container
+            },
+        ) {
             TileIcon(tile.kind, tile.tone, Modifier.size(22.dp))
         }
         Column {
@@ -170,7 +188,11 @@ private fun StatusTile(tile: Tile, modifier: Modifier) {
             Spacer(Modifier.height(4.dp))
             Text(tile.value.resolve(), style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onSurface, maxLines = 2)
             tile.support?.let {
-                Text(it.resolve(), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
+                Text(
+                    it.resolve(), maxLines = 1,
+                    style = if (action != null) MaterialTheme.typography.labelLarge else MaterialTheme.typography.bodyMedium,
+                    color = if (action != null) tone.accent else MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
         }
     }

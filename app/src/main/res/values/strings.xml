@@ -54,8 +54,10 @@
     <string name="tile_tizentube_current">Up to date</string>
     <string name="tile_tizentube_update">%1$s available</string>
     <string name="tile_tizentube_missing">Not installed</string>
-    <string name="tile_button">YouTube button</string>
+    <string name="tile_button">Remote button</string>
     <string name="tile_button_tizentube">Opens TizenTube</string>
+    <string name="tile_button_none">No button yet</string>
+    <string name="tile_button_choose">Choose one ›</string>
     <string name="tile_button_not_mapped">Not changed</string>
     <string name="tile_last_check">Last check</string>
     <string name="ago_now">Just now</string>

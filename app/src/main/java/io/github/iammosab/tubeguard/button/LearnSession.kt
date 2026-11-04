@@ -49,7 +49,10 @@ class LearnSession(private val shell: Shell, private val store: KeyValue, privat
             ok = ok and shell.run("settings put global CustomKey_$code ${shellQuote(value)}").ok
         }
         if (list != NULL) ok = ok and shell.run("settings put global $LIST ${shellQuote(list)}").ok
-        if (learned != null && list != NULL) ok = ok and keys.apply(listOf(learned))
+        if (learned != null) {
+            // TCL's table opens TizenTube for the key; elsewhere TubeGuard has to catch it itself.
+            if (list != NULL) ok = ok and keys.apply(listOf(learned)) else store.put(KeyPolicy.TAKE_OVER, "true")
+        }
 
         val services = store.get(SAVED_A11Y)
         val restored = AccessibilitySetting.withService(services?.takeUnless { it == NULL }, OUR_SERVICE)

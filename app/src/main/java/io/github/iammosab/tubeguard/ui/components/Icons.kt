@@ -58,14 +58,14 @@ fun TileIcon(kind: TileKind, tone: Tone, modifier: Modifier = Modifier) {
                     line(accent, 3f, 12f to 6f, 12f to 13.5f)
                     drawCircle(accent, 1.8f * u, Offset(12 * u, 18 * u))
                 }
-                Tone.NEUTRAL -> line(accent, 3f, 6f to 12f, 18f to 12f)
+                Tone.NEUTRAL, Tone.ATTENTION -> line(accent, 3f, 6f to 12f, 18f to 12f)
             }
             TileKind.TIZENTUBE -> drawPath(
                 Path().apply { moveTo(8 * u, 5 * u); lineTo(19 * u, 12 * u); lineTo(8 * u, 19 * u); close() }, warm,
             )
             TileKind.BUTTON -> {
                 drawRoundRect(ink, Offset(7 * u, 2.5f * u), Size(10 * u, 19 * u), CornerRadius(5 * u), style = Stroke(2 * u))
-                drawCircle(warm, 2.3f * u, Offset(12 * u, 8.5f * u))
+                drawCircle(if (tone == Tone.ATTENTION) accent else warm, 2.3f * u, Offset(12 * u, 8.5f * u))
             }
             TileKind.LAST_CHECK -> {
                 drawCircle(ink, 8.5f * u, Offset(12 * u, 12 * u), style = Stroke(2 * u))
