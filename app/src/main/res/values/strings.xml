@@ -14,7 +14,7 @@
     <string name="reinstall">Reinstall (signs you out)</string>
     <string name="signature_note">The installed TizenTube is signed differently from the release build, so it can\'t be updated in place.</string>
 
-    <string name="section_button">YouTube button</string>
+    <string name="section_button">Remote buttons</string>
     <string name="take_over">Take over the YouTube button</string>
     <string name="learn">Choose a button for TizenTube</string>
     <string name="learn_prompt">Press it once. From now on it opens TizenTube. Nothing else on the TV reacts while TubeGuard listens. Back cancels.</string>
