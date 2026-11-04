@@ -47,6 +47,7 @@ object AdbKeepAlive {
         // Android binds a service when the setting changes, so ours is taken out and put back; and put back at
         // all if a force-stop dropped it.
         Settings.Secure.putString(cr, "enabled_accessibility_services", AccessibilitySetting.withoutService(services, OUR_SERVICE))
+        Thread.sleep(AccessibilitySetting.rebindPauseMs)
         Settings.Secure.putString(cr, "enabled_accessibility_services", AccessibilitySetting.withService(services, OUR_SERVICE))
         Settings.Secure.putInt(cr, Settings.Secure.ACCESSIBILITY_ENABLED, 1)
     }

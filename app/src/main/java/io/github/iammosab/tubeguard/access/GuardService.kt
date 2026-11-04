@@ -12,6 +12,7 @@ import android.view.accessibility.AccessibilityEvent
 import io.github.iammosab.tubeguard.App
 import io.github.iammosab.tubeguard.button.KeyPolicy
 import io.github.iammosab.tubeguard.button.TclKeys
+import io.github.iammosab.tubeguard.button.shouldPullTizenTubeBack
 import io.github.iammosab.tubeguard.shell.LocalAdb
 
 /**
@@ -52,8 +53,10 @@ class GuardService : AccessibilityService() {
 
     override fun onKeyEvent(event: KeyEvent): Boolean {
         val policy = App.of(this).keys
+        if (event.action == KeyEvent.ACTION_DOWN) Log.d(LocalAdb.TAG, "key ${event.keyCode}")
         if (event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0 && !policy.learning && policy.isTizenTubeKey(event.keyCode)) {
             App.of(this).onTizenTubeKey()
+            pulls = 0
         }
         if (policy.learning) {
             // Navigation keys pass through (Back cancels); any other key is the one being learned, and both its
@@ -72,12 +75,7 @@ class GuardService : AccessibilityService() {
         }
         if (!policy.shouldHandle(event.keyCode)) return false
         if (event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0) {
-            runCatching {
-                startActivity(
-                    Intent(Intent.ACTION_MAIN).setComponent(ComponentName(TclKeys.PKG, "dev.cobalt.app.MainActivity"))
-                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED)
-                )
-            }
+            runCatching { startActivity(tizenTubeIntent()) }
         }
         // Both the press and the release are consumed, so nothing else (e.g. Google TV's launcher) acts on the key.
         return true
@@ -86,7 +84,26 @@ class GuardService : AccessibilityService() {
     /** The learned key's release, still to swallow after learning ended on its press. */
     private var swallowUpOf: Int? = null
 
-    override fun onAccessibilityEvent(event: AccessibilityEvent?) {}
+    /** How many times TizenTube was brought back since the last press of its button. */
+    private var pulls = 0
+
+    override fun onAccessibilityEvent(event: AccessibilityEvent?) {
+        if (event?.eventType != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) return
+        val shown = event.packageName?.toString() ?: return
+        val app = App.of(this)
+        Log.d(LocalAdb.TAG, "window $shown (key ${app.lastTizenTubeKeyAt?.let { System.currentTimeMillis() - it }} ms ago)")
+        if (!shouldPullTizenTubeBack(System.currentTimeMillis(), app.lastTizenTubeKeyAt, shown, pulls)) return
+        // Another binding on the same key put its app over TizenTube: put TizenTube back on top.
+        pulls++
+        runCatching { startActivity(tizenTubeIntent()) }
+        val name = runCatching { packageManager.getApplicationLabel(packageManager.getApplicationInfo(shown, 0)).toString() }
+            .getOrDefault(shown)
+        if (shown != packageName) app.onKeyConflict(name)
+    }
+
+    private fun tizenTubeIntent() = Intent(Intent.ACTION_MAIN)
+        .setComponent(ComponentName(TclKeys.PKG, "dev.cobalt.app.MainActivity"))
+        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED)
 
     override fun onInterrupt() {}
 

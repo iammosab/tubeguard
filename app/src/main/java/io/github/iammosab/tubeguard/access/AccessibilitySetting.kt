@@ -9,6 +9,13 @@ const val OUR_SERVICE = "io.github.iammosab.tubeguard/io.github.iammosab.tubegua
 object AccessibilitySetting {
     private const val KEY = "enabled_accessibility_services"
 
+    /**
+     * Between taking our entry out and putting it back. Written back to back, the TV only sees the final value,
+     * which is unchanged, and doesn't start the service (seen on the TCL after an update). Tests set it to 0.
+     */
+    @Volatile
+    var rebindPauseMs = 800L
+
     fun withService(current: String?, ours: String): String {
         val list = entries(current)
         return (if (ours in list) list else list + ours).joinToString(":")
@@ -23,7 +30,10 @@ object AccessibilitySetting {
      *  entry that is already there (e.g. after a force-stop left it unbound) is taken out and put back. */
     fun enable(shell: Shell, ours: String): ShellResult {
         val current = read(shell) ?: return ShellResult(1, "can't read $KEY")
-        if (ours in entries(current)) write(shell, withoutService(current, ours))
+        if (ours in entries(current)) {
+            write(shell, withoutService(current, ours))
+            if (rebindPauseMs > 0) Thread.sleep(rebindPauseMs)
+        }
         val put = write(shell, withService(current, ours))
         if (!put.ok) return put
         return shell.run("settings put secure accessibility_enabled 1")

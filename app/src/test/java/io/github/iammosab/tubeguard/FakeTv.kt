@@ -9,6 +9,7 @@ class FakeTv(
     val global: MutableMap<String, String> = mutableMapOf(),
     val secure: MutableMap<String, String> = mutableMapOf(),
 ) : Shell {
+    init { noPauses }
     val commands = mutableListOf<String>()
     var failReads = false
     private val get = Regex("^settings get (global|secure) (\\S+)$")
