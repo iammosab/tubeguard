@@ -2,4 +2,62 @@
 <resources>
     <string name="app_name">TubeGuard</string>
     <string name="service_description">Keeps official YouTube removed and sends the remote\'s YouTube button to TizenTube.</string>
+    <string name="channel_protection">Protection</string>
+    <string name="notify_not_protected">Not protected: %1$s</string>
+
+    <string name="headline_protected">Protected</string>
+    <string name="headline_not_set_up">Not set up yet</string>
+    <string name="headline_no_adb">Not protected: can\'t reach the TV\'s ADB</string>
+    <string name="headline_youtube">Official YouTube is installed</string>
+    <string name="headline_off">Off: the TV is back to official YouTube</string>
+    <string name="headline_detail">Last check %1$s · YouTube removed: %2$d</string>
+    <string name="never">never</string>
+    <string name="working">Working…</string>
+
+    <string name="setup_title">Set up</string>
+    <string name="setup_steps">1. Settings → Device Preferences (or System) → About → press Build 7 times.\n2. Developer options → turn on USB debugging (and Network debugging if the TV has it).\n   On Android 11 and later without network debugging: Wireless debugging → Pair device with pairing code, and enter the port and code below.\n3. Press Connect. When the TV asks \"Allow USB debugging?\", tick Always allow and choose Allow.</string>
+    <string name="pair_port">Pairing port</string>
+    <string name="pair_code">Pairing code</string>
+    <string name="pair">Pair</string>
+    <string name="connect">Connect and set up</string>
+    <string name="setup_done">Setup: %1$s</string>
+
+    <string name="section_youtube">Official YouTube</string>
+    <string name="youtube_removed">Removed</string>
+    <string name="youtube_present">Installed.</string>
+    <string name="youtube_present_protected">Installed. TubeGuard removes it on the next check.</string>
+    <string name="unknown">Unknown (no ADB)</string>
+
+    <string name="section_tizentube">TizenTube</string>
+    <string name="tizentube_status">Version %1$s · latest release %2$s</string>
+    <string name="not_installed">not installed</string>
+    <string name="update_now">Update now</string>
+    <string name="reinstall">Reinstall (signs you out)</string>
+    <string name="signature_note">The installed TizenTube is signed differently from the release build, so it can\'t be updated in place.</string>
+
+    <string name="section_button">YouTube button</string>
+    <string name="button_tcl">Mapped to TizenTube with TCL\'s button table.</string>
+    <string name="button_tcl_not">TCL button table not mapped yet.</string>
+    <string name="button_a11y_on">Taken over by TubeGuard (key %1$s).</string>
+    <string name="button_a11y_off">Not taken over.</string>
+    <string name="button_others">Other apps that can handle remote buttons: %1$s</string>
+    <string name="take_over">Take over the YouTube button</string>
+    <string name="learn">Learn my YouTube button</string>
+    <string name="learn_prompt">Press your remote\'s YouTube button now…</string>
+    <string name="default_keys">defaults</string>
+
+    <string name="section_settings">Settings</string>
+    <string name="keep_adb">Keep network debugging on after a restart</string>
+
+    <string name="section_log">Log</string>
+    <string name="log_empty">Nothing yet.</string>
+
+    <string name="undo">Undo</string>
+    <string name="undo_confirm">Bring official YouTube and the TV\'s own YouTube button back, and stop protecting? TizenTube stays installed.</string>
+    <string name="uninstall_tizentube">Uninstall TizenTube</string>
+    <string name="uninstall_confirm">Uninstall TizenTube? You will be signed out of it.</string>
+    <string name="check_app_update">Check for app update</string>
+    <string name="about">TubeGuard %1$s · latest %2$s</string>
+    <string name="yes">Yes</string>
+    <string name="cancel">Cancel</string>
 </resources>

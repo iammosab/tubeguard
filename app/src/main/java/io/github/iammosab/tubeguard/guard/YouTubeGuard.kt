@@ -22,7 +22,8 @@ class YouTubeGuard(
 
     /** Removes every guarded package that is back; [trigger] says why we looked (boot, package_added, ...). */
     fun enforce(trigger: String): GuardResult {
-        if (store?.get("protection") == "off") return GuardResult.Absent
+        // Only between setup and Undo: before setup the owner hasn't asked for anything yet.
+        if (store != null && store.get("protection") != "on") return GuardResult.Absent
         var result: GuardResult = GuardResult.Absent
         for (pkg in packages) {
             val how = listing(pkg)

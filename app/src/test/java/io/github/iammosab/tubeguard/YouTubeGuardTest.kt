@@ -67,4 +67,20 @@ class YouTubeGuardTest {
         val shell = FakeShell(Regex(".") to ShellResult(-100, "ADB not connected"))
         assertTrue(YouTubeGuard(shell, log).enforce("boot") is GuardResult.Failed)
     }
+
+    @Test
+    fun doesNothingBeforeSetup() {
+        // Opening the app (or a boot) before the owner ran setup must not remove anything.
+        val shell = listing("package:com.google.android.youtube.tv")
+        val result = YouTubeGuard(shell, log, store = MapKeyValue()).enforce("app_open")
+        assertEquals(GuardResult.Absent, result)
+        assertTrue(shell.commands.isEmpty())
+    }
+
+    @Test
+    fun enforcesOnceSetUp() {
+        val shell = listing("package:com.google.android.youtube.tv")
+        val result = YouTubeGuard(shell, log, store = MapKeyValue("protection" to "on")).enforce("boot")
+        assertTrue(result is GuardResult.Removed)
+    }
 }
