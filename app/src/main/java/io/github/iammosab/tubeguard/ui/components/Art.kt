@@ -190,3 +190,54 @@ fun PairingArt(t: Float, modifier: Modifier = Modifier) = Canvas(modifier) {
         box(u, 20f, 66f, 60f, 4f, 2f, if (filled == 6) StatusGreen else Row)
     }
 }
+
+enum class RemoteMood { PAUSING, LISTENING, LEARNED, FAILED }
+
+/**
+ * The remote, for learning its YouTube button. Pausing: a pause badge. Listening: the button pulses with
+ * rings going out from it. Learned: the button turns green with a tick. Failed: a red warning badge.
+ */
+@Composable
+fun RemoteArt(mood: RemoteMood, t: Float, modifier: Modifier = Modifier) = Canvas(modifier) {
+    grid { u ->
+        // Body, D-pad ring and OK, and two rows of small keys; the big key below them is the YouTube button.
+        box(u, 44f, 4f, 32f, 82f, 16f, Ink)
+        drawCircle(Row, 10f * u, Offset(60 * u, 22 * u))
+        drawCircle(Ink, 5f * u, Offset(60 * u, 22 * u))
+        listOf(52f, 68f).forEach { x -> drawCircle(Off, 2.6f * u, Offset(x * u, 40 * u)) }
+        val key = Offset(60 * u, 58 * u)
+        when (mood) {
+            RemoteMood.LISTENING -> {
+                // Three rings leaving the button, one after the other.
+                (0 until 3).forEach { i ->
+                    val p = (t + i / 3f) % 1f
+                    drawCircle(Accent.copy(alpha = (1f - p) * 0.8f), (9f + p * 30f) * u, key, style = Stroke(2f * u))
+                }
+                drawCircle(Accent, (8.5f + 1.2f * kotlin.math.sin(t * 6.283f * 2)) * u, key)
+                drawPath(
+                    Path().apply { moveTo(57 * u, 54 * u); lineTo(64.5f * u, 58 * u); lineTo(57 * u, 62 * u); close() }, Ember,
+                )
+            }
+            RemoteMood.LEARNED -> {
+                drawCircle(StatusGreen, 10f * u, key)
+                tick(u, listOf(55.5f to 58f, 58.5f to 61f, 64.5f to 54.5f), White, 2.6f)
+            }
+            RemoteMood.PAUSING, RemoteMood.FAILED -> drawCircle(Off, 8.5f * u, key)
+        }
+        listOf(72f, 79f).forEach { y -> box(u, 52f, y, 16f, 3f, 1.5f, Off) }
+        // Badge on the remote's shoulder.
+        when (mood) {
+            RemoteMood.PAUSING -> {
+                drawCircle(Panel, 9f * u, Offset(82 * u, 10 * u))
+                box(u, 78.5f, 5.5f, 2.6f, 9f, 1.3f, Accent)
+                box(u, 83f, 5.5f, 2.6f, 9f, 1.3f, Accent)
+            }
+            RemoteMood.FAILED -> {
+                drawCircle(StatusRed, 9f * u, Offset(82 * u, 10 * u))
+                box(u, 80.8f, 5f, 2.4f, 6.5f, 1.2f, White)
+                drawCircle(White, 1.4f * u, Offset(82 * u, 14.4f * u))
+            }
+            else -> {}
+        }
+    }
+}

@@ -53,7 +53,7 @@ class KeyPolicy(private val store: KeyValue, private val now: () -> Long = Syste
     companion object {
         const val TAKE_OVER = "takeOverButton"
         const val LEARNED = "learnedKeyCode"
-        private const val LEARN_MS = 15_000L
+        const val LEARN_MS = 15_000L
         /** KEYCODE_BUTTON_3, which many remotes send for YouTube, and TCL's own YouTube code. */
         val DEFAULT_CODES = listOf(190, 4065)
         /** DPAD up, down, left, right, centre; Back; Home; Enter. */

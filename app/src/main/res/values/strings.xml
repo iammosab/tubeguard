@@ -17,7 +17,7 @@
     <string name="section_button">YouTube button</string>
     <string name="take_over">Take over the YouTube button</string>
     <string name="learn">Learn my YouTube button</string>
-    <string name="learn_prompt">Press your remote\'s YouTube button now. Nothing else on the TV reacts to it while TubeGuard listens; Back cancels.</string>
+    <string name="learn_prompt">Press it once now. Nothing else on the TV reacts while TubeGuard listens. Back cancels.</string>
     <string name="keep_adb">Keep network debugging on after a restart</string>
 
     <string name="undo">Undo</string>
@@ -128,9 +128,21 @@
     <string name="take_over_detail">For remotes on TVs other than TCL. Off while another app handles the buttons.</string>
     <string name="take_over_tcl">Not needed here: TCL\'s own button table already opens TizenTube.</string>
     <string name="take_over_others">Other apps handle remote buttons here: %1$s</string>
-    <string name="learn_preparing">Getting ready: pausing the remote\'s other buttons for a moment…</string>
+    <string name="learn_title_preparing">Getting ready</string>
+    <string name="learn_title_listening">Press your YouTube button</string>
+    <string name="learn_title_done">Got it</string>
+    <string name="learn_title_failed">Couldn\'t start listening</string>
+    <string name="learn_step_pause">Pause</string>
+    <string name="learn_step_press">Press</string>
+    <string name="learn_step_restore">Restore</string>
+    <string name="learn_seconds_left">%1$d s left</string>
+    <string name="learn_key_chip">Key %1$d  →  TizenTube</string>
+    <string name="learn_done_body">That button now opens TizenTube. Everything else on the remote is back as it was.</string>
+    <string name="learn_retry">Try again</string>
+    <string name="learn_tcl_buttons">TCL buttons</string>
+    <string name="learn_preparing">Pausing the remote\'s other buttons for a moment, so nothing else reacts to your press.</string>
     <string name="learn_done">Got it: key %1$d. It now opens TizenTube.</string>
-    <string name="learn_failed">TubeGuard couldn\'t pause the other buttons, so it didn\'t start listening. Check TubeGuard is set up, then try again.</string>
+    <string name="learn_failed">TubeGuard couldn\'t pause the other buttons, so it didn\'t listen. Check TubeGuard is set up, then try again.</string>
     <string name="done">Done</string>
     <string name="learn_detail">If your YouTube button isn\'t the usual one, press it once to teach TubeGuard.</string>
     <string name="learn_detail_code">Learned: key %1$s</string>

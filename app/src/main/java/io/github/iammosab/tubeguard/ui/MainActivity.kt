@@ -35,12 +35,18 @@ import io.github.iammosab.tubeguard.ui.screens.DeviceState
 import io.github.iammosab.tubeguard.ui.screens.intent
 import io.github.iammosab.tubeguard.ui.screens.readDeviceState
 import io.github.iammosab.tubeguard.ui.screens.HomeScreen
+import io.github.iammosab.tubeguard.ui.screens.LearnDialog
+import io.github.iammosab.tubeguard.ui.screens.LearnPhase
 import io.github.iammosab.tubeguard.ui.screens.SettingsActions
 import io.github.iammosab.tubeguard.ui.screens.SettingsScreen
 import io.github.iammosab.tubeguard.ui.screens.SetupScreen
 import io.github.iammosab.tubeguard.ui.screens.SetupStep
 import io.github.iammosab.tubeguard.ui.theme.TubeGuardTheme
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 
 private sealed interface Screen {
     data object Home : Screen
@@ -51,7 +57,6 @@ private sealed interface Screen {
 
 private enum class Ask { UNDO, UNINSTALL, REINSTALL, LEARN }
 
-private enum class LearnState { PREPARING, LISTENING, LEARNED, FAILED }
 
 /** The one activity: home, the setup walk-through, activity and settings, all driven by the remote. */
 class MainActivity : ComponentActivity() {
@@ -61,12 +66,22 @@ class MainActivity : ComponentActivity() {
     private var screen by mutableStateOf<Screen>(Screen.Home)
     private var ask by mutableStateOf<Ask?>(null)
     /** Read again whenever the owner comes back from the TV's settings. */
-    private var learnState by mutableStateOf(LearnState.PREPARING)
+    private var learnState by mutableStateOf(LearnPhase.PREPARING)
     private var device by mutableStateOf(DeviceState(developerOptions = false, usbDebugging = false))
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val tvName = runCatching { Settings.Global.getString(contentResolver, "device_name") }.getOrNull()
+        // While the screen is showing, keep its status current: things change behind it (the watch restarting
+        // after an update, YouTube coming back), and a stale red or green would mislead.
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.RESUMED) {
+                while (true) {
+                    delay(10_000)
+                    if (!busy && ask == null) refresh()
+                }
+            }
+        }
         setContent {
             TubeGuardTheme {
                 Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
@@ -152,12 +167,7 @@ class MainActivity : ComponentActivity() {
     private fun settingsActions() = SettingsActions(
         keepAdb = { on -> app.store.put(AdbKeepAlive.KEY, on.toString()); refresh() },
         takeOver = { on -> app.store.put(KeyPolicy.TAKE_OVER, on.toString()); refresh() },
-        learn = {
-            learnState = LearnState.PREPARING
-            ask = Ask.LEARN
-            // Listening only starts once every other binding on the remote is paused.
-            app.startLearning { ok -> runOnUiThread { learnState = if (ok) LearnState.LISTENING else LearnState.FAILED } }
-        },
+        learn = ::startLearning,
         updateTizenTube = { work { app.updateTizenTube(app.versionOf(Target.TIZENTUBE.pkg), force = true) } },
         reinstallTizenTube = { ask = Ask.REINSTALL },
         uninstallTizenTube = { ask = Ask.UNINSTALL },
@@ -165,6 +175,23 @@ class MainActivity : ComponentActivity() {
         setUpAgain = { screen = Screen.Setup(SetupStep.DEVELOPER) },
         undo = { ask = Ask.UNDO },
     )
+
+    private fun startLearning() {
+        learnState = LearnPhase.PREPARING
+        ask = Ask.LEARN
+        // Listening only starts once every other binding on the remote is paused.
+        app.startLearning { ok -> runOnUiThread { learnState = if (ok) LearnPhase.LISTENING else LearnPhase.FAILED } }
+    }
+
+    /** What learning pauses, by name: TCL's button table and the other button apps. */
+    private fun pausedNames(s: Status?): List<String> {
+        if (s == null) return emptyList()
+        val apps = s.otherKeyServices.map { it.substringBefore('/') }.distinct().map { pkg ->
+            runCatching { packageManager.getApplicationLabel(packageManager.getApplicationInfo(pkg, 0)).toString() }
+                .getOrDefault(pkg)
+        }
+        return (if (s.isTcl) listOf(getString(R.string.learn_tcl_buttons)) else emptyList()) + apps
+    }
 
     @OptIn(ExperimentalMaterial3ExpressiveApi::class)
     @Composable
@@ -188,34 +215,19 @@ class MainActivity : ComponentActivity() {
                     refresh()
                 }
                 LaunchedEffect(learnState) {
-                    when (learnState) {
+                    if (learnState == LearnPhase.LISTENING) {
                         // Until a key is caught or the 15 seconds are up.
-                        LearnState.LISTENING -> {
-                            while (app.keys.learning) delay(200)
-                            if (app.keys.lastLearned != null) learnState = LearnState.LEARNED else close()
-                        }
-                        LearnState.LEARNED -> {
-                            delay(1_800)
-                            close()
-                        }
-                        else -> {}
+                        while (app.keys.learning) delay(200)
+                        if (app.keys.lastLearned != null) learnState = LearnPhase.LEARNED else close()
                     }
                 }
-                AlertDialog(
-                    onDismissRequest = close,
-                    icon = { if (learnState == LearnState.PREPARING || learnState == LearnState.LISTENING) LoadingIndicator(Modifier.size(56.dp)) },
-                    title = { Text(stringResource(R.string.learn)) },
-                    text = {
-                        Text(
-                            when (learnState) {
-                                LearnState.PREPARING -> stringResource(R.string.learn_preparing)
-                                LearnState.LISTENING -> stringResource(R.string.learn_prompt)
-                                LearnState.LEARNED -> stringResource(R.string.learn_done, app.keys.lastLearned ?: 0)
-                                LearnState.FAILED -> stringResource(R.string.learn_failed)
-                            },
-                        )
-                    },
-                    confirmButton = { TextButton(close) { Text(stringResource(if (learnState == LearnState.LEARNED) R.string.done else R.string.cancel)) } },
+                LearnDialog(
+                    phase = learnState,
+                    learnedKey = app.keys.lastLearned,
+                    paused = pausedNames(status),
+                    windowMs = KeyPolicy.LEARN_MS,
+                    onClose = close,
+                    onRetry = ::startLearning,
                 )
             }
             null -> {}
