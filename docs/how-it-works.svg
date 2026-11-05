@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 300" font-family="Roboto, 'Segoe UI', Helvetica, Arial, sans-serif">
+  <title>How TubeGuard works</title>
+  <rect width="960" height="300" rx="28" fill="#131314"/>
+
+  <!-- 1. Removes official YouTube -->
+  <g transform="translate(40 40)">
+    <rect width="270" height="220" rx="24" fill="#201F21"/>
+    <g transform="translate(95 28)">
+      <rect width="80" height="52" rx="10" fill="#E6E1E3"/>
+      <rect x="28" y="56" width="24" height="5" rx="2.5" fill="#E6E1E3"/>
+      <circle cx="40" cy="26" r="15" fill="#2F8F57"/>
+      <path d="M33 26 l5 5 l9-10" stroke="#fff" stroke-width="3.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    </g>
+    <text x="135" y="132" fill="#E6E1E3" font-size="20" font-weight="700" text-anchor="middle">Preinstalled app off</text>
+    <text x="135" y="160" fill="#C9C5C7" font-size="14" text-anchor="middle">Removed, and removed again</text>
+    <text x="135" y="180" fill="#C9C5C7" font-size="14" text-anchor="middle">the moment it comes back</text>
+  </g>
+
+  <!-- arrow -->
+  <path d="M322 150 h22 m-8 -8 l8 8 l-8 8" stroke="#FFB4A9" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- 2. TizenTube installed and current -->
+  <g transform="translate(345 40)">
+    <rect width="270" height="220" rx="24" fill="#201F21"/>
+    <g transform="translate(103 28)">
+      <rect width="64" height="64" rx="18" fill="#3A2A28"/>
+      <path d="M24 18 L46 32 L24 46 Z" fill="#FFB4A9"/>
+    </g>
+    <text x="135" y="132" fill="#E6E1E3" font-size="20" font-weight="700" text-anchor="middle">TizenTube on</text>
+    <text x="135" y="160" fill="#C9C5C7" font-size="14" text-anchor="middle">Installed, put back if missing,</text>
+    <text x="135" y="180" fill="#C9C5C7" font-size="14" text-anchor="middle">updated from its releases</text>
+  </g>
+
+  <path d="M627 150 h22 m-8 -8 l8 8 l-8 8" stroke="#FFB4A9" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- 3. The remote's button -->
+  <g transform="translate(650 40)">
+    <rect width="270" height="220" rx="24" fill="#201F21"/>
+    <g transform="translate(117 22)">
+      <rect width="36" height="76" rx="18" fill="#E6E1E3"/>
+      <circle cx="18" cy="20" r="9" fill="#3A383B"/>
+      <circle cx="18" cy="48" r="9" fill="#FFB4A9"/>
+      <path d="M15 43.5 L22.5 48 L15 52.5 Z" fill="#561E17"/>
+    </g>
+    <text x="135" y="132" fill="#E6E1E3" font-size="20" font-weight="700" text-anchor="middle">One button</text>
+    <text x="135" y="160" fill="#C9C5C7" font-size="14" text-anchor="middle">The YouTube button, or any</text>
+    <text x="135" y="180" fill="#C9C5C7" font-size="14" text-anchor="middle">you choose, opens TizenTube</text>
+  </g>
+</svg>
